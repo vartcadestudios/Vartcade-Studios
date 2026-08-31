@@ -8,8 +8,8 @@ Unity 2D project repository.
 - `develop` — active integration branch. Feature branches merge here first.
 - `feature/<name>` — one branch per task or feature (e.g. `feature/scene-architecture`).
 
-**Protection rules (set under Settings → Branches on GitHub):**
-- Require a pull request before merging
+**Protection rules**
+- Pull request before merging
 - Require at least 1 approval
 - Disallow force-pushes
 - Disallow branch deletion
@@ -36,14 +36,14 @@ Assets/
 │   │   ├── Levels/
 │   │   └── UI/
 │   ├── Scripts/
-│   │   ├── Data/          # ScriptableObjects, data containers
-│   │   ├── Controllers/   # Player/enemy/game logic controllers
-│   │   ├── Managers/      # Singletons: GameManager, AudioManager, etc.
+│   │   ├── Data/         
+│   │   ├── Controllers/   
+│   │   ├── Managers/      
 │   │   ├── UI/
 │   │   └── Utils/
-│   ├── Settings/          # Input System assets, URP/render settings, etc.
+│   ├── Settings/        
 │   └── Resources/
-└── ThirdParty/            # Imported packages/plugins, kept separate from custom content
+└── ThirdParty/            
 ```
 
 ## Scene Hierarchy Convention
