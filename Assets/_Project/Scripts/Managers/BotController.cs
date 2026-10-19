@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using TDTS.Data;
 
@@ -6,7 +8,7 @@ namespace TDTS.Managers
 {
     /// <summary>
     /// PLACEHOLDER until online multiplayer: takes the turns of every seat except
-    /// LocalPlayer with simple random choices, so a full Day and Night keep moving.
+    /// LocalPlayer with simple random choices, so a whole game keeps moving.
     /// GameManager adds this automatically when "Bots Play Other Seats" is ticked.
     /// </summary>
     public class BotController : MonoBehaviour
@@ -50,32 +52,69 @@ namespace TDTS.Managers
             {
                 yield return new WaitForSeconds(thinkSeconds);
                 if (gm.TurnNumber != turn) yield break;
+                if (gm.PendingTrade != null) continue; // wait for the answer
 
-                if (!TryOneAction(bot))
+                bool acted = gm.CurrentState == GameState.DayPhase ? DayAction(bot) : NightAction(bot);
+                if (!acted && gm.TurnNumber == turn)
                 {
                     gm.PassTurn(bot); // nothing worked, so don't hold up the table
-                    yield break;
+                    if (gm.TurnNumber == turn) yield break; // couldn't even pass; leave it
                 }
             }
         }
 
-        private bool TryOneAction(PlayerData bot)
+        private bool DayAction(PlayerData bot)
         {
-            if (gm.CurrentState == GameState.DayPhase)
-            {
-                int morning = bot.hand.FindIndex(c => c.HasMorningFront);
-                float roll = Random.value;
+            float roll = Random.value;
+            bool tradingOnly = gm.CurrentDayRule == DayRule.TradingOnly;
 
-                if (morning >= 0 && roll < 0.25f) return gm.PlayCard(bot, morning);
-                if (gm.DeckCount > 0 && bot.hand.Count < GameManager.MaxHandSize && roll < 0.85f) return gm.DrawCard(bot);
-                return gm.PassTurn(bot);
+            // Never offer the local player a trade with eyes closed: they couldn't see it
+            var partners = Others(bot).Where(p => p.hand.Count > 0 && (!gm.EyesClosed || p != gm.LocalPlayer)).ToList();
+            if (bot.hand.Count > 0 && partners.Count > 0 && (tradingOnly || roll < 0.15f))
+                return gm.OfferTrade(bot, Random.Range(0, bot.hand.Count), Pick(partners));
+
+            if (tradingOnly) return gm.PassTurn(bot);
+
+            int morning = bot.hand.FindIndex(c => c.HasMorningFront);
+            if (morning >= 0 && roll < 0.40f)
+                return gm.PlayCard(bot, morning, Pick(Others(bot)));
+
+            if (gm.DeckCount > 0 && bot.hand.Count < GameManager.MaxHandSize && roll < 0.90f)
+                return gm.DrawCard(bot);
+
+            return gm.PassTurn(bot);
+        }
+
+        private bool NightAction(PlayerData bot)
+        {
+            // First action: always peek at a card it hasn't looked at yet (R4)
+            if (gm.PeeksThisTurn == 0 && bot.hand.Count > 0)
+            {
+                int unseen = bot.hand.FindIndex(c => !c.peeked);
+                return gm.PeekCard(bot, unseen >= 0 ? unseen : Random.Range(0, bot.hand.Count));
             }
 
-            // Real Night actions (peek, steal, swap) come in Phase 4
-            if (gm.CurrentState == GameState.NightPhase) return gm.SkipAction(bot);
+            float roll = Random.value;
+            var victims = Others(bot).Where(p => p.hand.Count > 0).ToList();
 
-            return false;
+            int nightCard = bot.hand.FindIndex(c => c.HasNightBack && c.peeked);
+            if (nightCard >= 0 && victims.Count > 0 && roll < 0.5f)
+                return gm.PlayCard(bot, nightCard, Pick(victims));
+
+            if (victims.Count > 0 && bot.hand.Count < GameManager.MaxHandSize && roll < 0.65f)
+                return gm.StealFrom(bot, Pick(victims));
+
+            // Swap away a card it knows is Trash
+            int trash = bot.hand.FindIndex(c => c.peeked && c.back == BackType.Trash);
+            if (trash >= 0 && victims.Count > 0 && roll < 0.85f)
+                return gm.SwapWith(bot, trash, Pick(victims));
+
+            return gm.PassTurn(bot);
         }
+
+        private List<PlayerData> Others(PlayerData bot) => gm.Players.Where(p => p != bot).ToList();
+
+        private static PlayerData Pick(List<PlayerData> list) => list.Count == 0 ? null : list[Random.Range(0, list.Count)];
 
         private void HandleTradeOffered()
         {

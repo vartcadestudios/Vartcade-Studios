@@ -1155,6 +1155,8 @@ MonoBehaviour:
   nightButtons: {fileID: 314879197}
   dayButtons: {fileID: 1216224174}
   rondoWheel: {fileID: 1494865474}
+  rondoLabel: {fileID: 1740087183}
+  blackoutOverlay: {fileID: 99347104}
   rondoStartDay: 6
 --- !u!4 &411688206
 Transform:
@@ -7039,7 +7041,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TDTS.Managers.GameManager
   currentState: 0
   currentDay: 1
-  bunkerCapacity: 3
+  bunkerCapacity: 2
   players: []
   limitActions: 1
 --- !u!4 &1940532016
@@ -7420,7 +7422,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2100368758
 RectTransform:
   m_ObjectHideFlags: 0

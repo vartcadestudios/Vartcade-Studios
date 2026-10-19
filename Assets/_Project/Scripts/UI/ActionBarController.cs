@@ -7,7 +7,8 @@ namespace TDTS.UI
 {
     /// <summary>
     /// Wires the Day and Night action buttons to GameManager for the local player and
-    /// greys them out when it isn't your turn. Adds a Pass button next to the Day buttons.
+    /// greys them out when it isn't your turn. Adds the buttons the scene doesn't have yet
+    /// (Pass, Accept/Decline trade, Night Play card) as copies of existing ones.
     /// </summary>
     public class ActionBarController : MonoBehaviour
     {
@@ -22,6 +23,10 @@ namespace TDTS.UI
         [SerializeField] private Button skipButton;
 
         private Button passButton;
+        private Button acceptButton;
+        private Button declineButton;
+        private Button nightPlayButton;
+        private TextMeshProUGUI declineLabel;
 
         private void Start()
         {
@@ -32,15 +37,17 @@ namespace TDTS.UI
             scavengeButton.onClick.AddListener(gm.DrawForLocalPlayer);
             playCardButton.onClick.AddListener(gm.PlaySelectedForLocalPlayer);
             stealButton.onClick.AddListener(gm.StealForLocalPlayer);
-            skipButton.onClick.AddListener(gm.SkipForLocalPlayer);
+            swapButton.onClick.AddListener(gm.SwapSelectedForLocalPlayer);
 
-            // P5 Pass: a copy of the Scavenge button so it matches the row's style
-            passButton = Instantiate(scavengeButton, scavengeButton.transform.parent);
-            passButton.name = "PassButton";
-            passButton.onClick = new Button.ButtonClickedEvent();
-            passButton.onClick.AddListener(gm.PassForLocalPlayer);
-            TextMeshProUGUI label = passButton.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null) label.text = "Pass";
+            // P11: at Night the old Skip button ends your turn
+            skipButton.onClick.AddListener(gm.PassForLocalPlayer);
+            SetLabel(skipButton, "End turn");
+
+            passButton = CopyOf(scavengeButton, "Pass", gm.PassForLocalPlayer);
+            nightPlayButton = CopyOf(stealButton, "Play card", gm.PlaySelectedForLocalPlayer);
+            acceptButton = CopyOf(scavengeButton, "Accept trade", () => gm.AnswerTradeForLocalPlayer(true));
+            declineButton = CopyOf(scavengeButton, "Decline", () => gm.AnswerTradeForLocalPlayer(false));
+            declineLabel = declineButton.GetComponentInChildren<TextMeshProUGUI>();
         }
 
         private void Update()
@@ -48,18 +55,50 @@ namespace TDTS.UI
             GameManager gm = GameManager.Instance;
             if (gm == null) return;
 
+            bool offeredToMe = gm.PendingTrade != null && gm.PendingTrade.to == gm.LocalPlayer;
             bool myTurn = gm.IsLocalTurn && gm.PendingTrade == null;
             bool day = myTurn && gm.CurrentState == GameState.DayPhase;
             bool night = myTurn && gm.CurrentState == GameState.NightPhase;
+            bool tradingOnly = gm.CurrentDayRule == DayRule.TradingOnly;
+
+            // A trade offered to you replaces the Day buttons until you answer
+            tradeButton.gameObject.SetActive(!offeredToMe);
+            scavengeButton.gameObject.SetActive(!offeredToMe);
+            playCardButton.gameObject.SetActive(!offeredToMe);
+            if (passButton != null) passButton.gameObject.SetActive(!offeredToMe);
+            if (acceptButton != null) acceptButton.gameObject.SetActive(offeredToMe);
+            if (declineButton != null)
+            {
+                declineButton.gameObject.SetActive(offeredToMe);
+                if (offeredToMe) declineLabel.text = $"Decline ({Mathf.CeilToInt(gm.TradeSecondsLeft)}s)";
+            }
 
             tradeButton.interactable = day;
-            scavengeButton.interactable = day;
-            playCardButton.interactable = day;
+            scavengeButton.interactable = day && !tradingOnly;
+            playCardButton.interactable = day && !tradingOnly;
             if (passButton != null) passButton.interactable = day;
 
             stealButton.interactable = night;
-            skipButton.interactable = night;
-            swapButton.interactable = false; // Swap arrives with the Night phase in Phase 4
+            swapButton.interactable = night;
+            skipButton.interactable = night && gm.PeeksThisTurn > 0;
+            if (nightPlayButton != null) nightPlayButton.interactable = night;
+        }
+
+        /// <summary>A copy of an existing button, so new buttons match the row's style.</summary>
+        private static Button CopyOf(Button original, string text, UnityEngine.Events.UnityAction onClick)
+        {
+            Button copy = Instantiate(original, original.transform.parent);
+            copy.name = text.Replace(" ", "") + "Button";
+            copy.onClick = new Button.ButtonClickedEvent();
+            copy.onClick.AddListener(onClick);
+            SetLabel(copy, text);
+            return copy;
+        }
+
+        private static void SetLabel(Button button, string text)
+        {
+            TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null) label.text = text;
         }
     }
 }

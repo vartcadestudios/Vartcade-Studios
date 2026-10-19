@@ -8,8 +8,8 @@ using TDTS.Managers;
 namespace TDTS.UI
 {
     /// <summary>
-    /// Displays the local player's hand. Tapping a Supply/Trash/Key card peeks at it
-    /// for a moment; tapping an action card plays it into the play space.
+    /// Displays the local player's hand. Day: tap a card to pick it for Trade or Play card.
+    /// Night: tap a card you haven't seen to Peek (its back shows for a moment), or a peeked one to pick it.
     /// </summary>
     public class HandController : MonoBehaviour
     {
@@ -28,8 +28,6 @@ namespace TDTS.UI
 
         [Header("Peek")]
         [SerializeField] private float peekSeconds = 1.5f;
-        [Tooltip("Rulebook: peeking is a Night action. Tick this to enforce it.")]
-        [SerializeField] private bool peekOnlyAtNight = false;
 
         private int peekIndex = -1;
         private Coroutine peekRoutine;
@@ -76,26 +74,15 @@ namespace TDTS.UI
             CardData card = me.hand[index];
             GameState state = GameManager.Instance.CurrentState;
 
-            // Day: tap picks the card for Trade or Play card
-            if (state == GameState.DayPhase)
+            // Night: tapping a card you haven't seen is a Peek (costs 1 action).
+            // Any other tap picks the card for Trade, Swap or Play card.
+            if (state == GameState.NightPhase && !card.peeked)
             {
-                GameManager.Instance.SelectCard(index);
+                if (GameManager.Instance.PeekCard(me, index)) Peek(index);
                 return;
             }
 
-            if (state == GameState.NightPhase && card.HasNightBack && card.peeked)
-            {
-                GameManager.Instance.PlayCard(me, index);
-                return;
-            }
-
-            if (peekOnlyAtNight && GameManager.Instance.CurrentState != GameState.NightPhase)
-            {
-                Debug.Log("[HandController] Peeking is a Night action.");
-                return;
-            }
-
-            Peek(index);
+            GameManager.Instance.SelectCard(index);
         }
 
         private void Peek(int index)
@@ -139,9 +126,11 @@ namespace TDTS.UI
                 Color color = CardView.ColorFor(card, revealed);
                 slots[i].background.color = color;
                 slots[i].label.color = CardView.TextColorOn(color);
+                // Spec C6: a peeked card only shows a marker, not its back
+                string marker = card.peeked ? " <color=#FFD54A>(peeked)</color>" : "";
                 slots[i].label.text = revealed
                     ? $"<size=60%>BACK</size>\n{card.BackName}"
-                    : $"{card.FrontName}\n<size=60%>{CardView.TypeName(card, false)}</size>";
+                    : $"{card.FrontName}\n<size=60%>{CardView.TypeName(card, false)}{marker}</size>";
 
                 // Thick gold border on the card picked for Trade / Play card
                 Outline outline = slots[i].root.GetComponent<Outline>();
@@ -154,4 +143,4 @@ namespace TDTS.UI
             }
         }
     }
-}
+}

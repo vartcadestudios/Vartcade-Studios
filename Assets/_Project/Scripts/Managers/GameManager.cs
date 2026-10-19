@@ -8,9 +8,15 @@ namespace TDTS.Managers
 {
     public enum GameState { Init, DayPhase, NightPhase, Sundown }
 
+    // Spec V12
+    public enum DayRule { Normal, TradingOnly, Blackout }
+
+    // Spec G6 to G13: the 8 Rondo results
+    public enum RondoResult { Purge, TradingOnly, HungerDisaster, Tornado, DoomsdayClock, Blackout, Outbreak, PeacefulDay }
+
     /// <summary>
-    /// Core state machine for game flow. All transitions go through
-    /// TryTransition/ResolveX methods. Never set state directly.
+    /// Core state machine for game flow, following the FC01 Digital Port Spec.
+    /// All transitions go through TryTransition/ResolveX methods. Never set state directly.
     /// </summary>
     public class GameManager : MonoBehaviour
     {
@@ -19,46 +25,63 @@ namespace TDTS.Managers
         [Header("Live Game State")]
         [SerializeField] private GameState currentState = GameState.Init;
         [SerializeField] private int currentDay = 1;
-        [SerializeField] private int bunkerCapacity = 3;
+        [SerializeField] private int bunkerCapacity = 2;
 
         [Header("Players")]
+        [Tooltip("Spec V4: turn order. Shuffled at setup.")]
         [SerializeField] private List<PlayerData> players = new List<PlayerData>();
 
         [Header("Actions")]
-        [Tooltip("Rulebook: one main action per phase. Untick to test freely.")]
+        [Tooltip("Rulebook: 1 action per Day turn, 2 per Night turn. Untick to test freely.")]
         [SerializeField] private bool limitActions = true;
 
         // The spec has no hand limit, but the hand row only has 6 slots for now.
         public const int MaxHandSize = 6;
         public const int StartingHandSize = 2;
         public const int MaxPlayers = 6;
+        public const int RondoStartDay = 6;
+        public const int SupplyToSurvive = 3;
+        public const int PurgeCount = 5;
 
         [Header("Deck")]
         [SerializeField] private DeckRecipe deckRecipe = new DeckRecipe();
         [Tooltip("0 = a new random game every time. Any other number deals the same game again.")]
         [SerializeField] private int randomSeed = 0;
 
-        private readonly List<CardData> deck = new List<CardData>();
-        private readonly List<CardData> removedFromGame = new List<CardData>();
         [Header("Testing")]
         [Tooltip("PLACEHOLDER until online play: simple bots take the turns of every seat except yours.")]
         [SerializeField] private bool botsPlayOtherSeats = true;
+        [Tooltip("Start the game on a later Day to test the Rondo (6+) or Sundown (10) quickly.")]
+        [Range(1, 10)]
+        [SerializeField] private int startOnDay = 1;
 
+        private readonly List<CardData> deck = new List<CardData>();
         private readonly List<CardData> discardPile = new List<CardData>();
+        private readonly List<CardData> removedFromGame = new List<CardData>();
+        private readonly List<string> playLog = new List<string>();
         private System.Random rng;
         private PlayerData localPlayer;
-        private readonly List<string> playLog = new List<string>();
         private PlayerData selectedTarget;
         private int selectedCardIndex = -1;
-        private int actionsLeft;
 
-        // Spec V4/V5: whose turn it is, and how many players have had their turn this phase
+        // Spec V2, V6, V7, V11, V12
+        private int sundownDay = 10;
+        private int actionsLeft;
+        private int peeksThisTurn;
+        private DayRule dayRule = DayRule.Normal;
+        private readonly List<RondoResult> rondoUsed = new List<RondoResult>();
+        private RondoResult? todaysRondo;
+
+        // Spec V4/V5: whose turn it is and who has already gone this phase
         private int activeIndex = -1;
         private int turnDirection = 1;
-        private int turnsTaken;
         private int turnNumber;
+        private readonly HashSet<PlayerData> hadTurn = new HashSet<PlayerData>();
+        private CardData stolenThisTurn;
 
         private TradeOffer pendingTrade;
+        private float tradeOfferedAt;
+        public const float TradeTimeoutSeconds = 30f; // spec R9
 
         /// <summary>Spec zone Z5: a card offered to another player, waiting for their answer.</summary>
         public class TradeOffer
@@ -70,12 +93,15 @@ namespace TDTS.Managers
 
         public GameState CurrentState => currentState;
         public int CurrentDay => currentDay;
+        public int SundownDay => sundownDay;
         public int BunkerCapacity => bunkerCapacity;
         public int BunkerSeated => players.Count(p => p.isSeated);
         public IReadOnlyList<PlayerData> Players => players;
         public int DeckCount => deck.Count;
+        public int DiscardCount => discardPile.Count;
         public bool LimitActions => limitActions;
         public int ActionsLeft => actionsLeft;
+        public int PeeksThisTurn => peeksThisTurn;
         public PlayerData SelectedTarget => selectedTarget;
         public int SelectedCardIndex => selectedCardIndex;
         public IReadOnlyList<string> PlayLog => playLog;
@@ -83,6 +109,14 @@ namespace TDTS.Managers
         public bool IsLocalTurn => ActivePlayer != null && ActivePlayer == localPlayer;
         public int TurnNumber => turnNumber;
         public TradeOffer PendingTrade => pendingTrade;
+        public DayRule CurrentDayRule => dayRule;
+        public RondoResult? TodaysRondo => todaysRondo;
+        public bool TurnOrderReversed => turnDirection < 0;
+
+        /// <summary>Night, or a Blackout Day: other players can't see what the active player does.</summary>
+        public bool EyesClosed =>
+            currentState == GameState.NightPhase ||
+            (currentState == GameState.DayPhase && dayRule == DayRule.Blackout);
 
         // The player sitting at this device. Placeholder: the first test player registered.
         public PlayerData LocalPlayer => localPlayer;
@@ -103,6 +137,9 @@ namespace TDTS.Managers
         public event Action OnTargetChanged; // also fires when the selected hand card changes
         public event Action OnTurnChanged;
         public event Action OnTradeOffered;
+        public event Action<RondoResult> OnRondoSpun;
+        /// <summary>The local player learned the back of a card (Peek, Steal-Peek or Flashlight).</summary>
+        public event Action<PlayerData, CardData> OnCardRevealedToYou;
 
         private void Awake()
         {
@@ -120,11 +157,20 @@ namespace TDTS.Managers
                 gameObject.AddComponent<BotController>();
 
             SetUpGame();
-            TryTransition(GameState.DayPhase); // clears the log, so the setup report comes after
-            AddLog("The Bunker Key has been shuffled into the deck.");
-            AddLog($"Turn order: {string.Join(" > ", players.Select(p => p.playerName))}");
-            AddLog($"Dealt {StartingHandSize} cards each. {deck.Count} cards left in the pool.");
+            TryTransition(GameState.DayPhase);
         }
+
+        private void Update()
+        {
+            // R9: no answer in time counts as a decline
+            if (pendingTrade != null && Time.time - tradeOfferedAt > TradeTimeoutSeconds)
+            {
+                AddLog("No answer in time.");
+                RespondToTrade(false, -1);
+            }
+        }
+
+        public float TradeSecondsLeft => pendingTrade == null ? 0f : Mathf.Max(0f, TradeTimeoutSeconds - (Time.time - tradeOfferedAt));
 
         /// <summary>Spec setup S1 to S5.</summary>
         private void SetUpGame()
@@ -146,6 +192,7 @@ namespace TDTS.Managers
 
             // S2, S3: pick the Key and shuffle it into the 72 cards
             deck.Clear();
+            discardPile.Clear();
             removedFromGame.Clear();
             deck.AddRange(DeckBuilder.BuildDrawPile(deckRecipe, rng, removedFromGame));
 
@@ -156,7 +203,9 @@ namespace TDTS.Managers
                     GiveCard(p, TakeTopCard());
 
             // S5
-            currentDay = 1;
+            currentDay = Mathf.Clamp(startOnDay, 1, 10);
+            sundownDay = 10;
+            rondoUsed.Clear();
 
             OnDeckChanged?.Invoke();
             OnHandsChanged?.Invoke();
@@ -184,10 +233,47 @@ namespace TDTS.Managers
             to.hand.Add(card);
         }
 
-        // ---------- Actions ----------
+        private CardData TakeRandomCard(PlayerData from)
+        {
+            int i = rng.Next(from.hand.Count);
+            CardData card = from.hand[i];
+            from.hand.RemoveAt(i);
+            return card;
+        }
+
+        // ---------- Log ----------
+
+        private void AddLog(string line)
+        {
+            playLog.Add(line);
+            if (playLog.Count > 20) playLog.RemoveAt(0);
+            Debug.Log($"[GameManager] {line}");
+            OnPlayLogChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Logs a player's action. With eyes closed (Night, Blackout) only the acting player
+        /// sees the details; everyone else just sees that something happened (spec C1).
+        /// </summary>
+        private void LogAction(PlayerData actor, string details)
+        {
+            if (EyesClosed && actor != localPlayer)
+                AddLog($"{actor.playerName} did something in the dark.");
+            else
+                AddLog(details);
+        }
+
+        /// <summary>Hand contents moved, so a selected card index may now point at a different card.</summary>
+        private void NotifyHandsChanged()
+        {
+            selectedCardIndex = -1;
+            OnHandsChanged?.Invoke();
+        }
+
+        // ---------- Action checks ----------
 
         /// <summary>Common checks for any player action: right phase, your turn, AP left.</summary>
-        private bool CanAct(PlayerData player, GameState phase, string actionName)
+        private bool CanAct(PlayerData player, GameState phase, string actionName, bool isPeek = false)
         {
             if (player == null) return false;
 
@@ -206,8 +292,19 @@ namespace TDTS.Managers
                 AddLog("Waiting for an answer to the trade.");
                 return false;
             }
-            return HasAction();
+            if (!HasAction()) return false;
+
+            // R4: the last Night action must be a peek if you haven't peeked yet
+            if (phase == GameState.NightPhase && !isPeek && MustPeekNow(player))
+            {
+                AddLog("You must peek at least once tonight. Tap one of your cards.");
+                return false;
+            }
+            return true;
         }
+
+        private bool MustPeekNow(PlayerData player) =>
+            limitActions && actionsLeft == 1 && peeksThisTurn == 0 && player.hand.Count > 0;
 
         private bool HasAction()
         {
@@ -224,26 +321,18 @@ namespace TDTS.Managers
             if (actionsLeft == 0) EndTurn();
         }
 
-        private void AddLog(string line)
-        {
-            playLog.Add(line);
-            if (playLog.Count > 20) playLog.RemoveAt(0);
-            Debug.Log($"[GameManager] {line}");
-            OnPlayLogChanged?.Invoke();
-        }
-
-        /// <summary>Hand contents moved, so a selected card index may now point at a different card.</summary>
-        private void NotifyHandsChanged()
-        {
-            selectedCardIndex = -1;
-            OnHandsChanged?.Invoke();
-        }
+        // ---------- Day actions ----------
 
         /// <summary>P3 Scavenge: draws the top card of the pool (Day).</summary>
         public bool DrawCard(PlayerData player)
         {
             if (!CanAct(player, GameState.DayPhase, "Scavenge")) return false;
 
+            if (dayRule == DayRule.TradingOnly)
+            {
+                AddLog("Trading Only today: no Scavenge.");
+                return false;
+            }
             if (deck.Count == 0)
             {
                 AddLog("The draw pile is empty.");
@@ -256,14 +345,14 @@ namespace TDTS.Managers
             }
 
             GiveCard(player, TakeTopCard());
-            AddLog($"{player.playerName} scavenged a card.");
+            LogAction(player, $"{player.playerName} scavenged a card.");
             OnDeckChanged?.Invoke();
             NotifyHandsChanged();
             SpendAction();
             return true;
         }
 
-        /// <summary>P1 Offer trade: puts 1 card on offer to the selected player (Day). They answer with RespondToTrade.</summary>
+        /// <summary>P1 Offer trade: puts 1 card on offer to another player (Day). They answer with RespondToTrade.</summary>
         public bool OfferTrade(PlayerData from, int handIndex, PlayerData to)
         {
             if (!CanAct(from, GameState.DayPhase, "Trade")) return false;
@@ -287,8 +376,9 @@ namespace TDTS.Managers
             CardData card = from.hand[handIndex];
             from.hand.RemoveAt(handIndex);
             pendingTrade = new TradeOffer { from = from, to = to, card = card };
+            tradeOfferedAt = Time.time;
 
-            AddLog($"{from.playerName} offers {to.playerName} a {card.FrontName}.");
+            LogAction(from, $"{from.playerName} offers {to.playerName} a {card.FrontName}.");
             NotifyHandsChanged();
             OnTradeOffered?.Invoke();
             return true;
@@ -318,24 +408,49 @@ namespace TDTS.Managers
             GiveCard(trade.to, trade.card);
             GiveCard(trade.from, given);
 
-            AddLog($"{trade.from.playerName} traded a {trade.card.FrontName} for {trade.to.playerName}'s {given.FrontName}.");
+            LogAction(trade.from, $"{trade.from.playerName} traded a {trade.card.FrontName} for {trade.to.playerName}'s {given.FrontName}.");
             NotifyHandsChanged();
             SpendAction();
         }
 
-        /// <summary>Steal: takes a random card from the selected target (Night).</summary>
-        public bool StealFromTarget(PlayerData thief)
+        // ---------- Night actions ----------
+
+        /// <summary>P6 Peek / P8 Steal-Peek: look at the back of one of your own cards (Night).</summary>
+        public bool PeekCard(PlayerData player, int handIndex)
+        {
+            if (player == null || handIndex < 0 || handIndex >= player.hand.Count) return false;
+            if (!CanAct(player, GameState.NightPhase, "Peek", isPeek: true)) return false;
+
+            CardData card = player.hand[handIndex];
+            bool stealPeek = card == stolenThisTurn && peeksThisTurn == 0; // R7
+            card.peeked = true;
+            peeksThisTurn++;
+
+            // Only the owner learns the back, so the details go to their screen only
+            string what = $"{card.FrontName} is really {card.BackName}";
+            LogAction(player, stealPeek
+                ? $"{player.playerName} Steal-Peeked: the stolen {what}."
+                : $"{player.playerName} peeked: {what}.");
+            if (player == localPlayer) OnCardRevealedToYou?.Invoke(player, card);
+
+            OnHandsChanged?.Invoke(); // selection stays: no card moved
+            SpendAction();
+            return true;
+        }
+
+        /// <summary>P7 Steal: takes a random face-down card from the target's hand (Night).</summary>
+        public bool StealFrom(PlayerData thief, PlayerData victim)
         {
             if (!CanAct(thief, GameState.NightPhase, "Steal")) return false;
 
-            if (selectedTarget == null || selectedTarget == thief)
+            if (victim == null || victim == thief)
             {
                 AddLog("Tap a player first, then Steal.");
                 return false;
             }
-            if (selectedTarget.hand.Count == 0)
+            if (victim.hand.Count == 0)
             {
-                AddLog($"{selectedTarget.playerName} has no cards.");
+                AddLog($"{victim.playerName} has no cards.");
                 return false;
             }
             if (thief.hand.Count >= MaxHandSize)
@@ -344,33 +459,57 @@ namespace TDTS.Managers
                 return false;
             }
 
-            PlayerData victim = selectedTarget;
-            int i = rng.Next(victim.hand.Count);
-            CardData stolen = victim.hand[i];
-            victim.hand.RemoveAt(i);
+            CardData stolen = TakeRandomCard(victim);
             GiveCard(thief, stolen);
+            stolenThisTurn = stolen;
 
-            AddLog($"{thief.playerName} stole a card from {victim.playerName}.");
+            LogAction(thief, $"{thief.playerName} stole a {stolen.FrontName} from {victim.playerName}.");
             NotifyHandsChanged();
             SpendAction();
             return true;
         }
 
-        /// <summary>Skip: uses one Night action and does nothing.</summary>
-        public bool SkipAction(PlayerData player)
+        /// <summary>P9 Swap: your chosen card for a random face-down card from the target (Night).</summary>
+        public bool SwapWith(PlayerData player, int handIndex, PlayerData target)
         {
-            if (!CanAct(player, GameState.NightPhase, "Skip")) return false;
+            if (!CanAct(player, GameState.NightPhase, "Swap")) return false;
 
-            AddLog($"{player.playerName} skipped.");
+            if (target == null || target == player)
+            {
+                AddLog("Tap a player first, then Swap.");
+                return false;
+            }
+            if (handIndex < 0 || handIndex >= player.hand.Count)
+            {
+                AddLog("Tap one of your peeked cards to pick it, then Swap.");
+                return false;
+            }
+            if (target.hand.Count == 0)
+            {
+                AddLog($"{target.playerName} has no cards.");
+                return false;
+            }
+
+            CardData mine = player.hand[handIndex];
+            player.hand.RemoveAt(handIndex);
+            CardData theirs = TakeRandomCard(target);
+            GiveCard(player, theirs);
+            GiveCard(target, mine);
+
+            LogAction(player, $"{player.playerName} swapped a {mine.FrontName} for {target.playerName}'s {theirs.FrontName}.");
+            NotifyHandsChanged();
             SpendAction();
             return true;
         }
 
+        // ---------- Playing action cards ----------
+
         /// <summary>
         /// P4 / P10: plays a card from a player's hand. Morning cards are played by their front
         /// in the Day, Night cards by their back at Night once the owner has peeked.
+        /// Some cards need a target player (Swap Deck, Flashlight, the two Targeted Skips).
         /// </summary>
-        public bool PlayCard(PlayerData player, int handIndex)
+        public bool PlayCard(PlayerData player, int handIndex, PlayerData target = null)
         {
             if (player == null || handIndex < 0 || handIndex >= player.hand.Count) return false;
 
@@ -384,53 +523,188 @@ namespace TDTS.Managers
 
             if (!allowed)
             {
-                AddLog($"{cardName} can't be played during {currentState}.");
+                AddLog(currentState == GameState.NightPhase && card.HasNightBack
+                    ? "Peek at a Night card before playing it."
+                    : $"{cardName} can't be played during {currentState}.");
                 return false;
             }
             if (!CanAct(player, currentState, "Play card")) return false;
+            if (isDay && dayRule == DayRule.TradingOnly)
+            {
+                AddLog("Trading Only today: no Action Cards.");
+                return false;
+            }
+            if (!NeedsTarget(card, isDay))
+            {
+                target = null;
+            }
+            else if (target == null || target == player)
+            {
+                AddLog($"Tap a player first, then play {cardName}.");
+                return false;
+            }
 
-            player.hand.RemoveAt(handIndex);
-            discardPile.Add(card);
+            // Flashlight stays in hand until its batteries run out (R10)
+            bool keepInHand = !isDay && card.nightAction == NightActionType.Flashlight && card.batteries > 1;
+            if (!keepInHand)
+            {
+                player.hand.RemoveAt(handIndex);
+                discardPile.Add(card);
+            }
 
-            // Card effects (G19 to G26) come in Phase 5
-            AddLog($"{player.playerName} played {cardName}.");
+            LogAction(player, target != null
+                ? $"{player.playerName} played {cardName} on {target.playerName}."
+                : $"{player.playerName} played {cardName}.");
+
+            if (isDay) ResolveMorningCard(card.morningAction, player, target);
+            else ResolveNightCard(card, player, target);
+
             OnCardPlayed?.Invoke(card);
+            OnDeckChanged?.Invoke();
             NotifyHandsChanged();
             SpendAction();
             return true;
         }
 
-        /// <summary>P5 Pass: ends the turn without acting.</summary>
+        public static bool NeedsTarget(CardData card, bool isDay) =>
+            isDay ? card.morningAction == MorningActionType.SwapDeck : card.HasNightBack;
+
+        /// <summary>G19 to G23.</summary>
+        private void ResolveMorningCard(MorningActionType action, PlayerData player, PlayerData target)
+        {
+            switch (action)
+            {
+                case MorningActionType.SwapDeck:
+                    (player.hand, target.hand) = (target.hand, player.hand);
+                    foreach (var c in player.hand) c.peeked = false;
+                    foreach (var c in target.hand) c.peeked = false;
+                    AddLog($"{player.playerName} and {target.playerName} swapped their whole hands.");
+                    break;
+
+                case MorningActionType.ReverseTurn:
+                    turnDirection = -turnDirection;
+                    AddLog("Turn order reversed!");
+                    break;
+
+                case MorningActionType.SkipNextPlayer:
+                    PlayerData next = players[(activeIndex + turnDirection + players.Count) % players.Count];
+                    next.daySkip = true;
+                    AddLog($"{next.playerName} will lose their next Day turn.");
+                    break;
+
+                case MorningActionType.EveryonePlusOne:
+                    int dealt = 0;
+                    foreach (PlayerData p in PlayersInTurnOrderFrom(player))
+                    {
+                        if (deck.Count == 0) break;
+                        if (p.hand.Count >= MaxHandSize) continue;
+                        GiveCard(p, TakeTopCard());
+                        dealt++;
+                    }
+                    AddLog($"Everyone +1 Card: {dealt} cards handed out.");
+                    break;
+
+                case MorningActionType.EveryoneSwitches:
+                    var hands = players.Select(p => p.hand).ToList();
+                    for (int i = 0; i < players.Count; i++)
+                    {
+                        int to = (i + turnDirection + players.Count) % players.Count;
+                        players[to].hand = hands[i];
+                        foreach (var c in hands[i]) c.peeked = false;
+                    }
+                    AddLog("Everyone passed their hand to the next player.");
+                    break;
+            }
+        }
+
+        /// <summary>G24 to G26.</summary>
+        private void ResolveNightCard(CardData card, PlayerData player, PlayerData target)
+        {
+            switch (card.nightAction)
+            {
+                case NightActionType.Flashlight:
+                    card.batteries--;
+                    if (target.hand.Count == 0) break;
+                    CardData seen = target.hand[rng.Next(target.hand.Count)];
+                    if (player == localPlayer)
+                    {
+                        AddLog($"Flashlight: one of {target.playerName}'s cards is {seen.BackName}. ({card.batteries} batteries left)");
+                        OnCardRevealedToYou?.Invoke(target, seen);
+                    }
+                    break;
+
+                case NightActionType.TargetedNightSkip:
+                    target.nightSkip = true;
+                    if (!EyesClosed || player == localPlayer) AddLog($"{target.playerName} will lose their next Night turn.");
+                    break;
+
+                case NightActionType.TargetedDaySkip:
+                    target.daySkip = true;
+                    if (!EyesClosed || player == localPlayer) AddLog($"{target.playerName} will lose their next Day turn.");
+                    break;
+            }
+        }
+
+        private IEnumerable<PlayerData> PlayersInTurnOrderFrom(PlayerData first)
+        {
+            int start = players.IndexOf(first);
+            for (int step = 0; step < players.Count; step++)
+                yield return players[(start + step * turnDirection + players.Count * players.Count) % players.Count];
+        }
+
+        // ---------- Ending a turn ----------
+
+        /// <summary>P5 Pass (Day) / P11 End Night turn: ends the turn. At Night you must have peeked (R4).</summary>
         public bool PassTurn(PlayerData player)
         {
             if (player == null || player != ActivePlayer || pendingTrade != null) return false;
 
-            AddLog($"{player.playerName} passed.");
+            if (currentState == GameState.NightPhase && peeksThisTurn == 0 && player.hand.Count > 0 && limitActions)
+            {
+                AddLog("You must peek at least once before ending your Night turn.");
+                return false;
+            }
+
+            LogAction(player, $"{player.playerName} {(currentState == GameState.NightPhase ? "ended their turn" : "passed")}.");
             EndTurn();
             return true;
         }
 
-        // Void wrappers so these can be used from On Click() bindings in the Inspector.
-        public void DrawForLocalPlayer() { DrawCard(LocalPlayer); }
-        public void StealForLocalPlayer() { StealFromTarget(LocalPlayer); }
-        public void SkipForLocalPlayer() { SkipAction(LocalPlayer); }
-        public void PassForLocalPlayer() { PassTurn(LocalPlayer); }
-        public void PlaySelectedForLocalPlayer() { PlaySelectedCard(LocalPlayer); }
-        public void TradeSelectedForLocalPlayer() { OfferTrade(LocalPlayer, selectedCardIndex, selectedTarget); }
+        // ---------- Local player helpers (used by the UI) ----------
 
-        private void PlaySelectedCard(PlayerData player)
+        public void DrawForLocalPlayer() { DrawCard(LocalPlayer); }
+        public void StealForLocalPlayer() { StealFrom(LocalPlayer, selectedTarget); }
+        public void SwapSelectedForLocalPlayer() { SwapWith(LocalPlayer, selectedCardIndex, selectedTarget); }
+        public void PassForLocalPlayer() { PassTurn(LocalPlayer); }
+        public void TradeSelectedForLocalPlayer() { OfferTrade(LocalPlayer, selectedCardIndex, selectedTarget); }
+        // Kept so the old Skip button binding still compiles; at Night it now ends your turn.
+        public void SkipForLocalPlayer() { PassTurn(LocalPlayer); }
+
+        public void PlaySelectedForLocalPlayer()
         {
             if (selectedCardIndex < 0)
             {
                 AddLog("Tap one of your cards first, then Play card.");
                 return;
             }
-            PlayCard(player, selectedCardIndex);
+            PlayCard(LocalPlayer, selectedCardIndex, selectedTarget);
+        }
+
+        /// <summary>The local player answers a trade a bot offered them: accept gives away their selected card.</summary>
+        public void AnswerTradeForLocalPlayer(bool accept)
+        {
+            if (pendingTrade == null || pendingTrade.to != localPlayer) return;
+            if (accept && selectedCardIndex < 0)
+            {
+                AddLog("Tap the card you'll give in return, then Accept.");
+                return;
+            }
+            RespondToTrade(accept, selectedCardIndex);
         }
 
         // ---------- Selection ----------
 
-        /// <summary>Tap a player zone to pick who you'll trade with or steal from. Tap again to clear.</summary>
+        /// <summary>Tap a player zone to pick who you'll trade with, steal from or target. Tap again to clear.</summary>
         public void SelectTarget(PlayerData player)
         {
             if (player == null || player == LocalPlayer) return;
@@ -438,7 +712,7 @@ namespace TDTS.Managers
             OnTargetChanged?.Invoke();
         }
 
-        /// <summary>Tap one of your cards to pick it for Trade or Play card. Tap again to clear.</summary>
+        /// <summary>Tap one of your cards to pick it for Trade, Swap or Play card. Tap again to clear.</summary>
         public void SelectCard(int handIndex)
         {
             selectedCardIndex = (selectedCardIndex == handIndex) ? -1 : handIndex;
@@ -450,38 +724,56 @@ namespace TDTS.Managers
         /// <summary>Steps 2 and 6: the first player in turn order starts the phase.</summary>
         private void StartPhaseTurns()
         {
-            turnsTaken = 0;
-            activeIndex = 0;
+            hadTurn.Clear();
+            activeIndex = turnDirection > 0 ? 0 : players.Count - 1;
             BeginTurn();
         }
 
-        /// <summary>Steps 3 and 7 (G14, G15): refill AP for the active player.</summary>
+        /// <summary>Steps 3 and 7 (G14, G15): skip check (R8), then refill AP for the active player.</summary>
         private void BeginTurn()
         {
-            actionsLeft = currentState == GameState.NightPhase ? 2 : 1;
+            PlayerData p = ActivePlayer;
+            hadTurn.Add(p);
+            turnNumber++;
             selectedTarget = null;
             selectedCardIndex = -1;
-            turnNumber++;
+            stolenThisTurn = null;
+            peeksThisTurn = 0;
 
+            bool isDay = currentState == GameState.DayPhase;
+            if ((isDay && p.daySkip) || (!isDay && p.nightSkip))
+            {
+                if (isDay) p.daySkip = false;
+                else p.nightSkip = false;
+                AddLog($"{p.playerName} loses this {(isDay ? "Day" : "Night")} turn.");
+                actionsLeft = 0;
+                OnTurnChanged?.Invoke();
+                EndTurn();
+                return;
+            }
+
+            actionsLeft = isDay ? 1 : 2;
             OnTargetChanged?.Invoke();
             OnTurnChanged?.Invoke();
         }
 
-        /// <summary>Steps 5 and 9 (G16): pass to the next player, or end the phase when everyone has gone.</summary>
+        /// <summary>Steps 5 and 9 (G16): next player who hasn't gone this phase, or end the phase.</summary>
         private void EndTurn()
         {
             if (currentState != GameState.DayPhase && currentState != GameState.NightPhase) return;
 
-            turnsTaken++;
-            if (turnsTaken >= players.Count)
+            for (int step = 1; step < players.Count; step++)
             {
-                if (currentState == GameState.DayPhase) ResolveDayPhase();
-                else ResolveNightPhase();
+                int i = ((activeIndex + step * turnDirection) % players.Count + players.Count) % players.Count;
+                if (hadTurn.Contains(players[i])) continue;
+
+                activeIndex = i;
+                BeginTurn();
                 return;
             }
 
-            activeIndex = (activeIndex + turnDirection + players.Count) % players.Count;
-            BeginTurn();
+            if (currentState == GameState.DayPhase) ResolveDayPhase();
+            else ResolveNightPhase();
         }
 
         // ---------- Phase flow ----------
@@ -492,11 +784,12 @@ namespace TDTS.Managers
             TryTransition(GameState.NightPhase);
         }
 
+        /// <summary>Step 10 (G17): next Day, or Sundown once Day reaches the Sundown Day.</summary>
         public void ResolveNightPhase()
         {
             if (currentState != GameState.NightPhase) return;
 
-            if (currentDay >= 10)
+            if (currentDay >= sundownDay)
             {
                 TryTransition(GameState.Sundown);
             }
@@ -507,28 +800,148 @@ namespace TDTS.Managers
             }
         }
 
-        public bool SeatPlayer(string playerName)
+        // ---------- Rondo (spec G5 to G13) ----------
+
+        /// <summary>Step 1: from Day 6, spin the Rondo for a result that hasn't come up yet.</summary>
+        private void SpinRondo()
         {
-            if (BunkerSeated >= bunkerCapacity) return false;
+            var options = ((RondoResult[])Enum.GetValues(typeof(RondoResult))).Where(r => !rondoUsed.Contains(r)).ToList();
+            if (options.Count == 0) return;
 
-            var player = players.FirstOrDefault(p => p.playerName == playerName);
-            if (player == null) return false;
+            RondoResult result = options[rng.Next(options.Count)];
+            rondoUsed.Add(result);
+            todaysRondo = result;
 
-            player.isSeated = true;
-            return true;
+            switch (result)
+            {
+                case RondoResult.Purge:
+                    int purged = Mathf.Min(PurgeCount, deck.Count);
+                    for (int i = 0; i < purged; i++) removedFromGame.Add(TakeTopCard());
+                    AddLog($"RONDO - Purge: {purged} cards removed from the deck for good.");
+                    break;
+
+                case RondoResult.TradingOnly:
+                    dayRule = DayRule.TradingOnly;
+                    AddLog("RONDO - Trading Only: no Scavenge and no Action Cards today.");
+                    break;
+
+                case RondoResult.HungerDisaster:
+                    int lostFood = LoseOneCardEach(c => c.IsRealSupply && c.backSupply == SupplyKind.Food);
+                    AddLog($"RONDO - Hunger Disaster: {lostFood} Food cards lost.");
+                    break;
+
+                case RondoResult.Tornado:
+                    var pool = players.SelectMany(p => p.hand).ToList();
+                    var sizes = players.Select(p => p.hand.Count).ToList();
+                    DeckBuilder.Shuffle(pool, rng);
+                    int next = 0;
+                    for (int i = 0; i < players.Count; i++)
+                    {
+                        players[i].hand = new List<CardData>();
+                        for (int n = 0; n < sizes[i]; n++) GiveCard(players[i], pool[next++]);
+                    }
+                    AddLog("RONDO - Tornado: everyone's cards were scattered and re-dealt.");
+                    break;
+
+                case RondoResult.DoomsdayClock:
+                    sundownDay = Mathf.Max(currentDay, sundownDay - 1);
+                    AddLog($"RONDO - Doomsday Clock: Sundown now comes on Day {sundownDay}.");
+                    break;
+
+                case RondoResult.Blackout:
+                    dayRule = DayRule.Blackout;
+                    AddLog("RONDO - Blackout: eyes stay closed during the Day too.");
+                    break;
+
+                case RondoResult.Outbreak:
+                    int lostMeds = LoseOneCardEach(c => c.IsRealSupply &&
+                        (c.backSupply == SupplyKind.Medicine || c.backSupply == SupplyKind.Entertainment));
+                    AddLog($"RONDO - Outbreak: {lostMeds} Medicine/Entertainment cards lost.");
+                    break;
+
+                case RondoResult.PeacefulDay:
+                    AddLog("RONDO - Peaceful Day: nothing happens.");
+                    break;
+            }
+
+            OnRondoSpun?.Invoke(result);
+            OnDeckChanged?.Invoke();
+            NotifyHandsChanged();
         }
 
-        public void SeatPlayerButtonHandler(string playerName)
+        /// <summary>Each player discards 1 random card matching the rule, if they have one. Returns how many were lost.</summary>
+        private int LoseOneCardEach(Func<CardData, bool> matches)
         {
-            bool success = SeatPlayer(playerName);
-            if (!success)
-                Debug.Log($"[GameManager] Seat attempt failed for {playerName}: bunker full or player not found.");
+            int lost = 0;
+            foreach (PlayerData p in players)
+            {
+                var candidates = p.hand.Where(matches).ToList();
+                if (candidates.Count == 0) continue;
+
+                CardData card = candidates[rng.Next(candidates.Count)];
+                p.hand.Remove(card);
+                discardPile.Add(card);
+                lost++;
+            }
+            return lost;
         }
 
-        public void UnseatPlayer(string playerName)
+        // ---------- Sundown (spec G18, R1, R2) ----------
+
+        private void DecideSurvivors()
         {
-            var player = players.FirstOrDefault(p => p.playerName == playerName);
-            if (player != null) player.isSeated = false;
+            foreach (var p in players)
+            {
+                p.isSeated = false;
+                p.resultReason = $"only {p.RealSupplyCount} real Supply";
+            }
+
+            int seatsLeft = bunkerCapacity;
+
+            // R1: the Key holder takes a seat no matter what
+            PlayerData keyHolder = players.FirstOrDefault(p => p.HoldsKey);
+            if (keyHolder != null)
+            {
+                keyHolder.isSeated = true;
+                keyHolder.resultReason = "held the Bunker Key";
+                seatsLeft--;
+            }
+
+            // Everyone else needs 3+ real Supply; the most Supply wins the remaining seats
+            var qualifiers = players
+                .Where(p => !p.isSeated && p.RealSupplyCount >= SupplyToSurvive)
+                .OrderByDescending(p => p.RealSupplyCount)
+                .ToList();
+
+            int index = 0;
+            while (seatsLeft > 0 && index < qualifiers.Count)
+            {
+                int supply = qualifiers[index].RealSupplyCount;
+                var tied = qualifiers.Skip(index).TakeWhile(p => p.RealSupplyCount == supply).ToList();
+
+                if (tied.Count <= seatsLeft)
+                {
+                    foreach (var p in tied)
+                    {
+                        p.isSeated = true;
+                        p.resultReason = $"{supply} real Supply";
+                    }
+                    seatsLeft -= tied.Count;
+                }
+                else
+                {
+                    // R2: a tie for the last seat leaves it empty
+                    foreach (var p in tied) p.resultReason = $"{supply} real Supply, tied for the last seat";
+                    break;
+                }
+                index += tied.Count;
+            }
+
+            for (int i = index; i < qualifiers.Count; i++)
+                if (!qualifiers[i].isSeated && !qualifiers[i].resultReason.Contains("tied"))
+                    qualifiers[i].resultReason = $"{qualifiers[i].RealSupplyCount} real Supply, but the bunker was full";
+
+            AddLog($"SUNDOWN. {BunkerSeated} of {players.Count} made it into the bunker.");
         }
 
         private void TryTransition(GameState next)
@@ -548,7 +961,23 @@ namespace TDTS.Managers
                 pendingTrade = null;
             }
 
-            Debug.Log($"[GameManager] State transition: {previous} -> {next} (Day {currentDay}, Bunker {BunkerSeated}/{bunkerCapacity})");
+            if (next == GameState.DayPhase)
+            {
+                dayRule = DayRule.Normal;
+                todaysRondo = null;
+                AddLog($"Day {currentDay} of {sundownDay}. Turn order: {string.Join(" > ", OrderedNames())}");
+                if (currentDay >= RondoStartDay) SpinRondo();
+            }
+            else if (next == GameState.NightPhase)
+            {
+                AddLog("Night falls. Eyes closed: each player takes 2 actions and must peek at least once.");
+            }
+            else if (next == GameState.Sundown)
+            {
+                DecideSurvivors();
+            }
+
+            Debug.Log($"[GameManager] State transition: {previous} -> {next} (Day {currentDay}, Sundown Day {sundownDay})");
             OnPlayLogChanged?.Invoke();
             OnTargetChanged?.Invoke();
             OnStateChanged?.Invoke(previous, next);
@@ -563,6 +992,12 @@ namespace TDTS.Managers
                 actionsLeft = 0;
                 OnTurnChanged?.Invoke();
             }
+        }
+
+        private IEnumerable<string> OrderedNames()
+        {
+            if (turnDirection > 0) return players.Select(p => p.playerName);
+            return Enumerable.Reverse(players).Select(p => p.playerName);
         }
     }
 }

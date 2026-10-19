@@ -19,7 +19,7 @@ namespace TDTS.UI
         {
             if (GameManager.Instance == null) return;
 
-            dayText.text = $"Day {GameManager.Instance.CurrentDay}";
+            dayText.text = $"Day {GameManager.Instance.CurrentDay} of {GameManager.Instance.SundownDay}";
 
             string phase = GameManager.Instance.CurrentState switch
             {
@@ -37,7 +37,10 @@ namespace TDTS.UI
             else
                 phaseText.text = $"{phase} - {active.playerName}'s turn";
 
-            bunkerText.text = $"Bunker {GameManager.Instance.BunkerSeated}/{GameManager.Instance.BunkerCapacity} seated";
+            // Seats are only filled at Sundown (spec R1)
+            bunkerText.text = GameManager.Instance.CurrentState == GameState.Sundown
+                ? $"Bunker {GameManager.Instance.BunkerSeated}/{GameManager.Instance.BunkerCapacity} seated"
+                : $"Bunker: {GameManager.Instance.BunkerCapacity} seats";
         }
     }
 }

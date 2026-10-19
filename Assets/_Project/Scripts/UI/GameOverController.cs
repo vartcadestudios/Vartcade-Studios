@@ -36,10 +36,14 @@ namespace TDTS.UI
         {
             if (next != GameState.Sundown) return;
 
+            // Spec R1/R2: survivors first, each with the reason
             var lines = GameManager.Instance.Players
-                .Select(p => $"{p.playerName}: {(p.isSeated ? "Survived" : "Lost")}");
+                .OrderByDescending(p => p.isSeated)
+                .Select(p => p.isSeated
+                    ? $"<color=#7BD88F><b>{p.playerName}: SURVIVED</b></color>  <size=70%>({p.resultReason})</size>"
+                    : $"<color=#E06C6C>{p.playerName}: did not survive</color>  <size=70%>({p.resultReason})</size>");
 
-            resultText.text = string.Join("\n", lines);
+            resultText.text = "<b>SUNDOWN</b>\n<size=70%>The bunker has 2 seats.</size>\n\n" + string.Join("\n", lines);
             gameOverPanel.SetActive(true);
         }
 
