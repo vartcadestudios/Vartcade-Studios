@@ -136,6 +136,15 @@ namespace TDTS.UI
             label.enableAutoSizing = true;
             label.fontSizeMin = 14f;
             label.fontSizeMax = 26f;
+
+            // The scene's labels were placed by hand; centre every one in its button
+            RectTransform rect = label.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(8f, 0f);
+            rect.offsetMax = new Vector2(-8f, 0f);
+            label.alignment = TextAlignmentOptions.Center;
+            label.margin = Vector4.zero;
         }
 
         private static void FitToRow(Button anyButtonInRow)
