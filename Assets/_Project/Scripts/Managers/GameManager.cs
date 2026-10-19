@@ -539,8 +539,8 @@ namespace TDTS.Managers
             return true;
         }
 
-        /// <summary>P7 Steal: takes a random face-down card from the target's hand (Night).</summary>
-        public bool StealFrom(PlayerData thief, PlayerData victim)
+        /// <summary>P7 Steal: the thief picks one of the target's face-down cards and takes it (Night).</summary>
+        public bool StealFrom(PlayerData thief, PlayerData victim, int victimCardIndex)
         {
             if (!CanAct(thief, GameState.NightPhase, "Steal")) return false;
 
@@ -559,8 +559,14 @@ namespace TDTS.Managers
                 Tell(thief, "Your hand is full.");
                 return false;
             }
+            if (victimCardIndex < 0 || victimCardIndex >= victim.hand.Count)
+            {
+                Tell(thief, $"Pick one of {victim.playerName}'s cards to steal.");
+                return false;
+            }
 
-            CardData stolen = TakeRandomCard(victim);
+            CardData stolen = victim.hand[victimCardIndex];
+            victim.hand.RemoveAt(victimCardIndex);
             GiveCard(thief, stolen);
             stolenThisTurn = stolen;
 
@@ -773,7 +779,7 @@ namespace TDTS.Managers
         // ---------- Local player helpers (used by the UI) ----------
 
         public void DrawForLocalPlayer() { DrawCard(LocalPlayer); }
-        public void StealForLocalPlayer() { StealFrom(LocalPlayer, selectedTarget); }
+        public void StealForLocalPlayer(int victimCardIndex) { StealFrom(LocalPlayer, selectedTarget, victimCardIndex); }
         public void SwapSelectedForLocalPlayer() { SwapWith(LocalPlayer, selectedCardIndex, selectedTarget); }
         public void PassForLocalPlayer() { PassTurn(LocalPlayer); }
         public void TradeSelectedForLocalPlayer() { OfferTrade(LocalPlayer, selectedCardIndex, selectedTarget); }

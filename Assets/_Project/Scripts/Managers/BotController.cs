@@ -51,7 +51,7 @@ namespace TDTS.Managers
         {
             while (gm.TurnNumber == turn)
             {
-                yield return new WaitForSeconds(thinkSeconds);
+                yield return new WaitForSeconds(GameSettings.BotThinkSeconds(thinkSeconds));
                 if (gm.TurnNumber != turn) yield break;
                 if (gm.PendingTrade != null) continue; // wait for the answer
 
@@ -103,7 +103,10 @@ namespace TDTS.Managers
                 return gm.PlayCard(bot, nightCard, Pick(victims));
 
             if (victims.Count > 0 && bot.hand.Count < GameManager.MaxHandSize && roll < 0.65f)
-                return gm.StealFrom(bot, Pick(victims));
+            {
+                PlayerData victim = Pick(victims);
+                return gm.StealFrom(bot, victim, Random.Range(0, victim.hand.Count));
+            }
 
             // Swap away a card it knows is Trash
             int trash = bot.hand.FindIndex(c => c.peeked && c.back == BackType.Trash);
@@ -126,7 +129,7 @@ namespace TDTS.Managers
 
         private IEnumerator AnswerTrade(GameManager.TradeOffer trade)
         {
-            yield return new WaitForSeconds(thinkSeconds);
+            yield return new WaitForSeconds(GameSettings.BotThinkSeconds(thinkSeconds));
             if (gm.PendingTrade != trade) yield break;
 
             bool accept = Random.value < acceptTradeChance && trade.to.hand.Count > 0;

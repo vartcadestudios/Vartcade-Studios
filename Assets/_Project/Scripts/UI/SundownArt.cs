@@ -1,4 +1,7 @@
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace TDTS.UI
@@ -19,6 +22,7 @@ namespace TDTS.UI
         public static readonly Color ButtonColor = new Color32(0x2A, 0x31, 0x45, 255);
         public static readonly Color AccentColor = new Color32(0xE0, 0x7A, 0x2E, 255);
         public static readonly Color TextColor = new Color32(0xE8, 0xE4, 0xDA, 255);
+        public static readonly Color PanelEdge = new Color32(0xFF, 0xFF, 0xFF, 22);
         private static readonly Color CardBackEdge = new Color32(0x6B, 0x33, 0x1E, 255);
         private static readonly Color CardBackColor = new Color32(0x1A, 0x1C, 0x33, 255);
 
@@ -26,6 +30,91 @@ namespace TDTS.UI
         private static Sprite circleSprite;
         private static Texture2D glowTexture;
         private static Texture2D poolTexture;
+
+        // ---------- Screens built in code (Main menu, Lobby, pop-ups) ----------
+
+        public static void EnsureCameraAndEventSystem()
+        {
+            if (Camera.main == null)
+            {
+                var cam = new GameObject("Main Camera", typeof(Camera)) { tag = "MainCamera" }.GetComponent<Camera>();
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = SkyTop;
+                cam.orthographic = true;
+            }
+
+            if (EventSystem.current == null)
+                new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        }
+
+        /// <summary>A full-screen 1920x1080-scaled canvas with the sundown sky and a low sun behind it.</summary>
+        public static Transform SkyCanvas(Transform parent)
+        {
+            var go = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+
+            var scaler = go.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            // Sky gradient, then a low sun sinking below the bottom edge
+            var sky = NewRect("Sky", go.transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var skyImage = sky.gameObject.AddComponent<RawImage>();
+            skyImage.texture = SkyTexture();
+            skyImage.raycastTarget = false;
+
+            var sun = NewRect("Sun", go.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-700f, -760f), new Vector2(700f, 640f));
+            var sunImage = sun.gameObject.AddComponent<RawImage>();
+            sunImage.texture = GlowTexture();
+            sunImage.color = new Color(SunColor.r, SunColor.g, SunColor.b, 0.55f);
+            sunImage.raycastTarget = false;
+
+            return go.transform;
+        }
+
+        /// <summary>A dark rounded card with a faint edge and a drop shadow, centred on its parent.</summary>
+        public static RectTransform NewPanel(string name, Transform parent, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var panel = NewRect(name, parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), offsetMin, offsetMax);
+            Rounded(panel.gameObject.AddComponent<Image>(), PanelColor, 24);
+            panel.gameObject.AddComponent<Outline>().effectColor = PanelEdge;
+            var shadow = panel.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shadow.effectDistance = new Vector2(0f, -10f);
+            return panel;
+        }
+
+        /// <summary>A rounded button that fills its parent (or its layout slot), with a bold label.</summary>
+        public static Button MakeButton(Transform parent, string text, Color color, UnityEngine.Events.UnityAction onClick, float size)
+        {
+            var rect = NewRect(text, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            Image background = Rounded(rect.gameObject.AddComponent<Image>(), Color.white, 14);
+            rect.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = background;
+            button.colors = Tints(color);
+            button.onClick.AddListener(onClick);
+
+            var label = NewText("Label", rect, size, FontStyles.Bold, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
+            label.text = text;
+            return button;
+        }
+
+        public static TextMeshProUGUI NewText(string name, Transform parent, float size, FontStyles style,
+            TextAlignmentOptions align, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var label = NewRect(name, parent, anchorMin, anchorMax, offsetMin, offsetMax).gameObject.AddComponent<TextMeshProUGUI>();
+            SundownFonts.Use(label);
+            label.fontSize = size;
+            label.fontStyle = style;
+            label.alignment = align;
+            label.color = Color.white;
+            label.raycastTarget = false;
+            return label;
+        }
 
         /// <summary>Turns an Image into a rounded panel. Bigger cornerScale = rounder corners.</summary>
         public static Image Rounded(Image image, Color color, float cornerScale = 24)

@@ -161,6 +161,7 @@ namespace TDTS.UI
             TextAlignmentOptions align, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
         {
             var label = NewRect(name, parent, anchorMin, anchorMax, offsetMin, offsetMax).gameObject.AddComponent<TextMeshProUGUI>();
+            SundownFonts.Use(label);
             label.fontSize = size;
             label.fontStyle = style;
             label.alignment = align;

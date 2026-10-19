@@ -166,9 +166,9 @@ namespace TDTS.Networking
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-        public void StealRpc(int targetSeat, RpcParams rpcParams = default)
+        public void StealRpc(int targetSeat, int victimCardIndex, RpcParams rpcParams = default)
         {
-            if (TrySeat(rpcParams, out PlayerData me)) gm.StealFrom(me, SeatAt(targetSeat));
+            if (TrySeat(rpcParams, out PlayerData me)) gm.StealFrom(me, SeatAt(targetSeat), victimCardIndex);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]

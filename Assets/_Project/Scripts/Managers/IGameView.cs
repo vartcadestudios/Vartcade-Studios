@@ -57,7 +57,8 @@ namespace TDTS.Managers
         void DrawForLocalPlayer();
         void TradeSelectedForLocalPlayer();
         void PlaySelectedForLocalPlayer();
-        void StealForLocalPlayer();
+        /// <summary>Steal the target's face-down card at this index (the thief picks it).</summary>
+        void StealForLocalPlayer(int victimCardIndex);
         void SwapSelectedForLocalPlayer();
         void PassForLocalPlayer();
         void PeekForLocalPlayer(int handIndex);

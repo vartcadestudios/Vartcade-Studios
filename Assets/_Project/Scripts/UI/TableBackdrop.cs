@@ -174,6 +174,7 @@ namespace TDTS.UI
             captionRect.pivot = new Vector2(0f, 0.5f);
             captionRect.sizeDelta = new Vector2(520f, 44f);
             caption = captionRect.gameObject.AddComponent<TextMeshProUGUI>();
+            SundownFonts.Use(caption);
             caption.fontSize = 28;
             caption.alignment = TextAlignmentOptions.MidlineLeft;
             caption.color = TextColor;

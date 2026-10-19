@@ -155,7 +155,7 @@ namespace TDTS.UI
             rect.offsetMin = offsetMin;
             rect.offsetMax = offsetMax;
 
-            var label = go.GetComponent<TextMeshProUGUI>();
+            var label = SundownFonts.Use(go.GetComponent<TextMeshProUGUI>());
             label.fontSize = size;
             label.fontStyle = style;
             label.alignment = align;

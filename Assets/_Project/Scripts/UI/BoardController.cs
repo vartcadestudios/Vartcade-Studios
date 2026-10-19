@@ -115,7 +115,7 @@ namespace TDTS.UI
             rect.anchorMax = Vector2.one;
             rect.offsetMin = rect.offsetMax = Vector2.zero;
 
-            var label = go.GetComponent<TextMeshProUGUI>();
+            var label = SundownFonts.Use(go.GetComponent<TextMeshProUGUI>());
             label.alignment = TextAlignmentOptions.Center;
             label.fontSize = 36;
             label.color = new Color32(0xE8, 0xE4, 0xDA, 255);

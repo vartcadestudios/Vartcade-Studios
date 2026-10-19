@@ -161,6 +161,7 @@ namespace TDTS.UI
         {
             var label = SundownArt.NewRect(name, parent, Vector2.zero, Vector2.one, new Vector2(4f, 0f), new Vector2(-4f, 0f))
                 .gameObject.AddComponent<TextMeshProUGUI>();
+            SundownFonts.Use(label);
             label.fontSize = size;
             label.fontStyle = style;
             label.alignment = TextAlignmentOptions.Center;

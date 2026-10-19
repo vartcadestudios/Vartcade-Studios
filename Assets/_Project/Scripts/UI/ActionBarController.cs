@@ -41,7 +41,8 @@ namespace TDTS.UI
             tradeButton.onClick.AddListener(gm.TradeSelectedForLocalPlayer);
             scavengeButton.onClick.AddListener(gm.DrawForLocalPlayer);
             playCardButton.onClick.AddListener(gm.PlaySelectedForLocalPlayer);
-            stealButton.onClick.AddListener(gm.StealForLocalPlayer);
+            Transform canvas = stealButton.GetComponentInParent<Canvas>().rootCanvas.transform;
+            stealButton.onClick.AddListener(() => StealPicker.Open(canvas, gm));
             swapButton.onClick.AddListener(gm.SwapSelectedForLocalPlayer);
 
             // P11: at Night the old Skip button ends your turn

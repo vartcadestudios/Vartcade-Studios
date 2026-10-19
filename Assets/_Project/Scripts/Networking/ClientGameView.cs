@@ -203,9 +203,9 @@ namespace TDTS.Networking
             if (Ready()) bridge.PlayCardRpc(selectedCardIndex, SeatOf(selectedTarget));
         }
 
-        public void StealForLocalPlayer()
+        public void StealForLocalPlayer(int victimCardIndex)
         {
-            if (Ready()) bridge.StealRpc(SeatOf(selectedTarget));
+            if (Ready()) bridge.StealRpc(SeatOf(selectedTarget), victimCardIndex);
         }
 
         public void SwapSelectedForLocalPlayer()
