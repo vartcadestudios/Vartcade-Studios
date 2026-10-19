@@ -38,6 +38,7 @@ namespace TDTS.UI
         private Image ground, horizonLine;
         private Image tableDimmer;
         private RawImage flashlight;
+        private RectTransform handRow;
         private CanvasGroup sunFade;
 
         private Vector2 sunPosition;
@@ -155,12 +156,13 @@ namespace TDTS.UI
             Transform hand = canvas.Find("HandArea");
             if (hand != null)
             {
-                var poolRect = NewRect("Flashlight", hand, Vector2.zero, new Vector2(0f, 1f), new Vector2(-40f, 0f), new Vector2(1140f, 0f));
+                var poolRect = NewRect("Flashlight", hand, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
                 poolRect.SetAsFirstSibling();
                 flashlight = poolRect.gameObject.AddComponent<RawImage>();
                 flashlight.texture = PoolTexture();
                 flashlight.color = Color.clear;
                 flashlight.raycastTarget = false;
+                handRow = hand.Find("HandRow") as RectTransform;
             }
         }
 
@@ -257,6 +259,7 @@ namespace TDTS.UI
                 night = Mathf.MoveTowards(night, wantNight, NightFadeSpeed * Time.deltaTime);
                 ApplyNight();
             }
+            if (night > 0f) FitFlashlight();
 
             float progress = Mathf.Clamp01((view.CurrentDay - 1f) / Mathf.Max(1f, view.SundownDay - 1f));
             duskSky.color = new Color(1f, 1f, 1f, progress * 0.85f);
@@ -268,6 +271,31 @@ namespace TDTS.UI
                 : Color.clear;
         }
 
+        /// <summary>The pool of light sits over the cards you actually hold, a little bigger than them.</summary>
+        private void FitFlashlight()
+        {
+            if (flashlight == null || handRow == null) return;
+            var area = (RectTransform)flashlight.transform.parent;
+            Vector2 min = new Vector2(float.MaxValue, float.MaxValue), max = new Vector2(float.MinValue, float.MinValue);
+            var corners = new Vector3[4];
+            foreach (RectTransform card in handRow)
+            {
+                if (!card.gameObject.activeSelf) continue;
+                card.GetWorldCorners(corners);
+                foreach (Vector3 corner in corners)
+                {
+                    Vector2 local = area.InverseTransformPoint(corner);
+                    min = Vector2.Min(min, local);
+                    max = Vector2.Max(max, local);
+                }
+            }
+            if (min.x > max.x) return; // no cards in hand
+
+            var pool = flashlight.rectTransform;
+            pool.localPosition = (min + max) / 2f;
+            pool.sizeDelta = (max - min) + new Vector2(160f, 90f);
+        }
+
         private void ApplyNight()
         {
             nightSky.color = new Color(1f, 1f, 1f, night);
@@ -276,7 +304,7 @@ namespace TDTS.UI
             ground.color = Color.Lerp(GroundDay, GroundNight, night);
             horizonLine.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, Mathf.Lerp(0.6f, 0.12f, night));
             if (tableDimmer != null) tableDimmer.color = new Color(0f, 0f, 0f, 0.5f * night);
-            if (flashlight != null) flashlight.color = WithAlpha(LightColor, 0.16f * night);
+            if (flashlight != null) flashlight.color = WithAlpha(LightColor, 0.12f * night);
             sunFade.alpha = 1f - night;
         }
 

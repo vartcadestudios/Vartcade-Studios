@@ -60,6 +60,10 @@ namespace TDTS.UI
             dayNumber = SundownFonts.UseTitle(NewText("Day", bar, 52, FontStyles.Normal, TextAlignmentOptions.MidlineLeft,
                 new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(28f, 0f), new Vector2(210f, 0f)));
             dayNumber.color = TextColor;
+            dayNumber.textWrappingMode = TextWrappingModes.NoWrap; // "SUNDOWN" stays on one line
+            dayNumber.enableAutoSizing = true;
+            dayNumber.fontSizeMin = 24f;
+            dayNumber.fontSizeMax = 52f;
 
             pips = NewRect("Pips", bar, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(210f, 2f), new Vector2(560f, 26f));
             countdown = NewText("Countdown", bar, 17, FontStyles.Bold, TextAlignmentOptions.TopLeft,

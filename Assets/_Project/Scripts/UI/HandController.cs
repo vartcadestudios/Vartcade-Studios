@@ -205,6 +205,40 @@ namespace TDTS.UI
                     outline.effectDistance = new Vector2(4f, -4f);
                 }
             }
+
+            MatchNameSizes();
+        }
+
+        /// <summary>
+        /// All names in your hand share one size, so "Food" doesn't shout beside "Entertainment".
+        /// Each card works out the biggest size that fits; everyone uses the smallest of those,
+        /// but never below a readable floor. A single word too long for the floor shrinks on its own.
+        /// </summary>
+        private void MatchNameSizes()
+        {
+            const float floor = 16f, ceiling = 22f;
+            var fits = new float[slots.Length];
+            float shared = ceiling;
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (!slots[i].root.activeInHierarchy) continue;
+                TextMeshProUGUI name = slots[i].label;
+                name.enableAutoSizing = true;
+                name.fontSizeMin = 10f;
+                name.fontSizeMax = ceiling;
+                name.ForceMeshUpdate();
+                fits[i] = name.fontSize;
+                shared = Mathf.Min(shared, fits[i]);
+            }
+
+            shared = Mathf.Max(shared, floor);
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (!slots[i].root.activeInHierarchy) continue;
+                slots[i].label.enableAutoSizing = false;
+                slots[i].label.fontSize = Mathf.Min(shared, fits[i]);
+            }
         }
     }
 }
