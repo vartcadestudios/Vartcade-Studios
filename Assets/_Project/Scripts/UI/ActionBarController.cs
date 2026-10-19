@@ -145,6 +145,7 @@ namespace TDTS.UI
             rect.offsetMax = new Vector2(-8f, 0f);
             label.alignment = TextAlignmentOptions.Center;
             label.margin = Vector4.zero;
+            label.text = label.text.Trim(); // some scene labels end in blank lines, which push the text up
         }
 
         private static void FitToRow(Button anyButtonInRow)
