@@ -856,7 +856,14 @@ namespace TDTS.Managers
             {
                 if (isDay) p.daySkip = false;
                 else p.nightSkip = false;
-                AddLog($"{p.playerName} loses this {(isDay ? "Day" : "Night")} turn.");
+                // The skipped player hears why; the card was played with eyes closed, so not by whom
+                string phase = isDay ? "Day" : "Night";
+                AddLog(new LogEntry
+                {
+                    text = $"<color=#D93B3B><b>You lose this {phase} turn.</b></color> Someone played a {phase} Skip on you last night.",
+                    viewer = p,
+                    forOthers = $"{p.playerName} loses this {phase} turn.",
+                });
                 actionsLeft = 0;
                 OnTurnChanged?.Invoke();
                 EndTurn();

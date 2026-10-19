@@ -213,10 +213,17 @@ namespace TDTS.Networking
                 string name = player.Properties != null && player.Properties.TryGetValue(NameKey, out PlayerProperty p)
                     ? p.Value
                     : "";
+                if (string.IsNullOrWhiteSpace(name)) name = $"Player {seats.Count + 1}";
+                name = name.Trim();
+
+                // Two people both called "Player" can't tell their turns apart: number the repeats
+                string unique = name;
+                for (int n = 2; seats.Exists(s => s.name == unique); n++) unique = $"{name} {n}";
+
                 seats.Add(new SeatInfo
                 {
                     playerId = player.Id,
-                    name = string.IsNullOrWhiteSpace(name) ? $"Player {seats.Count + 1}" : name,
+                    name = unique,
                     isHost = player.Id == session.Host,
                     isYou = player.Id == LocalPlayerId,
                 });
