@@ -315,6 +315,13 @@ namespace TDTS.Managers
 
         private void AddLog(LogEntry entry)
         {
+            // Tapping the same wrong thing again shouldn't fill the log with the same hint
+            if (entry.viewer != null && playLog.Count > 0)
+            {
+                LogEntry last = playLog[playLog.Count - 1];
+                if (last.viewer == entry.viewer && last.text == entry.text) return;
+            }
+
             playLog.Add(entry);
             if (playLog.Count > 40) playLog.RemoveAt(0);
             Debug.Log($"[GameManager] {entry.text}{(entry.viewer != null ? $" (only {entry.viewer.playerName} sees this)" : "")}");
@@ -619,7 +626,9 @@ namespace TDTS.Managers
             {
                 Tell(player, currentState == GameState.NightPhase && card.HasNightBack
                     ? "Peek at a Night card before playing it."
-                    : $"{cardName} can't be played during {currentState}.");
+                    : isDay
+                        ? $"{cardName} isn't an action card. By Day you can only play Morning Action cards."
+                        : $"{cardName} has no Night action to play.");
                 return false;
             }
             if (!CanAct(player, currentState, "Play card")) return false;

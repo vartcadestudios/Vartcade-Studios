@@ -85,13 +85,26 @@ namespace TDTS.UI
 
             tradeButton.interactable = day;
             scavengeButton.interactable = day && !tradingOnly;
-            playCardButton.interactable = day && !tradingOnly;
+            playCardButton.interactable = day && !tradingOnly && !PickedCardIsUnplayable(gm, true);
             if (passButton != null) passButton.interactable = day;
 
             stealButton.interactable = night;
             swapButton.interactable = night;
             skipButton.interactable = night && gm.PeeksThisTurn > 0;
-            if (nightPlayButton != null) nightPlayButton.interactable = night;
+            if (nightPlayButton != null) nightPlayButton.interactable = night && !PickedCardIsUnplayable(gm, false);
+        }
+
+        /// <summary>
+        /// The card you picked can't be played now (a Supply by Day, an unpeeked or non-Night card at Night).
+        /// With nothing picked the button stays live, so pressing it tells you to pick a card.
+        /// </summary>
+        private static bool PickedCardIsUnplayable(IGameView gm, bool day)
+        {
+            var hand = gm.LocalPlayer?.hand;
+            int index = gm.SelectedCardIndex;
+            if (hand == null || index < 0 || index >= hand.Count) return false;
+            var card = hand[index];
+            return day ? !card.HasMorningFront : !(card.HasNightBack && card.peeked);
         }
 
         /// <summary>A copy of an existing button, so new buttons match the row's style.</summary>
