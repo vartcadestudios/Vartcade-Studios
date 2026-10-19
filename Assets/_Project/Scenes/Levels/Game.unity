@@ -2336,6 +2336,7 @@ GameObject:
   - component: {fileID: 937017156}
   - component: {fileID: 937017158}
   - component: {fileID: 937017157}
+  - component: {fileID: 2000000002}
   m_Layer: 5
   m_Name: PlayerTop
   m_TagString: Untagged
@@ -4583,6 +4584,7 @@ GameObject:
   - component: {fileID: 1380861392}
   - component: {fileID: 1380861394}
   - component: {fileID: 1380861393}
+  - component: {fileID: 2000000001}
   m_Layer: 5
   m_Name: PlayerLeft
   m_TagString: Untagged
@@ -6512,6 +6514,7 @@ GameObject:
   - component: {fileID: 1767351037}
   - component: {fileID: 1767351039}
   - component: {fileID: 1767351038}
+  - component: {fileID: 2000000003}
   m_Layer: 5
   m_Name: PlayerRight
   m_TagString: Untagged
@@ -7847,3 +7850,48 @@ SceneRoots:
   - {fileID: 2039561047}
   - {fileID: 1817992935}
   - {fileID: 411688206}
+--- !u!114 &2000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1380861391}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 471c3ffef5f18634a926b84f6467590a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TDTS.UI.PlayerZoneController
+  seatsAfterYou: 1
+  label: {fileID: 672650283}
+  selectedColor: {r: 0.9098039, g: 0.50980395, b: 0.22745098, a: 1}
+--- !u!114 &2000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 937017155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 471c3ffef5f18634a926b84f6467590a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TDTS.UI.PlayerZoneController
+  seatsAfterYou: 2
+  label: {fileID: 1863697047}
+  selectedColor: {r: 0.9098039, g: 0.50980395, b: 0.22745098, a: 1}
+--- !u!114 &2000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1767351036}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 471c3ffef5f18634a926b84f6467590a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TDTS.UI.PlayerZoneController
+  seatsAfterYou: 3
+  label: {fileID: 1548456035}
+  selectedColor: {r: 0.9098039, g: 0.50980395, b: 0.22745098, a: 1}

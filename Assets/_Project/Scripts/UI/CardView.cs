@@ -78,38 +78,61 @@ namespace TDTS.UI
         {
             if (card == null) return;
 
-            Color color;
-            string type;
-
-            if (showingBack)
-            {
-                switch (card.back)
-                {
-                    case BackType.Supply: color = SupplyColor(card.backSupply); type = "REAL SUPPLY"; break;
-                    case BackType.NightAction: color = NightColor; type = "NIGHT ACTION"; break;
-                    case BackType.BunkerKey: color = KeyColor; type = "BUNKER KEY"; break;
-                    default: color = TrashColor; type = "TRASH"; break;
-                }
-            }
-            else
-            {
-                switch (card.front)
-                {
-                    case FrontType.MorningAction: color = MorningColor; type = "MORNING ACTION"; break;
-                    case FrontType.BunkerKey: color = KeyColor; type = "BUNKER KEY"; break;
-                    default: color = SupplyColor(card.frontSupply); type = "SUPPLY"; break;
-                }
-            }
-
+            Color color = ColorFor(card, showingBack);
             background.color = color;
             border.effectColor = showingBack ? new Color(0f, 0f, 0f, 0.6f) : new Color(1f, 1f, 1f, 0.35f);
 
-            Color text = (color == MorningColor || color == KeyColor) ? DarkText : LightText;
-            sideLabel.color = nameLabel.color = typeLabel.color = text;
+            sideLabel.color = nameLabel.color = typeLabel.color = TextColorOn(color);
 
             sideLabel.text = showingBack ? "BACK" : "FRONT";
             nameLabel.text = showingBack ? card.BackName : card.FrontName;
-            typeLabel.text = type;
+            typeLabel.text = TypeName(card, showingBack);
+        }
+
+        /// <summary>Card colour for one side, shared with the hand row so cards look the same everywhere.</summary>
+        public static Color ColorFor(CardData card, bool back)
+        {
+            if (back)
+            {
+                return card.back switch
+                {
+                    BackType.Supply => SupplyColor(card.backSupply),
+                    BackType.NightAction => NightColor,
+                    BackType.BunkerKey => KeyColor,
+                    _ => TrashColor
+                };
+            }
+
+            return card.front switch
+            {
+                FrontType.MorningAction => MorningColor,
+                FrontType.BunkerKey => KeyColor,
+                _ => SupplyColor(card.frontSupply)
+            };
+        }
+
+        public static Color TextColorOn(Color background) =>
+            (background == MorningColor || background == KeyColor) ? DarkText : LightText;
+
+        public static string TypeName(CardData card, bool back)
+        {
+            if (back)
+            {
+                return card.back switch
+                {
+                    BackType.Supply => "REAL SUPPLY",
+                    BackType.NightAction => "NIGHT ACTION",
+                    BackType.BunkerKey => "BUNKER KEY",
+                    _ => "TRASH"
+                };
+            }
+
+            return card.front switch
+            {
+                FrontType.MorningAction => "MORNING ACTION",
+                FrontType.BunkerKey => "BUNKER KEY",
+                _ => "SUPPLY"
+            };
         }
 
         private static Color SupplyColor(SupplyKind kind) => kind switch

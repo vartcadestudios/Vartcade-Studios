@@ -24,11 +24,6 @@ namespace TDTS.UI
         [Header("Card Slots (assign in Inspector)")]
         [SerializeField] private CardSlotView[] slots;
 
-        [Header("Colors")]
-        [SerializeField] private Color hiddenColor = new Color32(0x4A, 0x4A, 0x4A, 255);
-        [SerializeField] private Color revealedColor = new Color32(0x7A, 0x7A, 0x7A, 255);
-        [SerializeField] private Color actionColor = new Color32(0x3A, 0x2F, 0x52, 255);
-
         [Header("Peek")]
         [SerializeField] private float peekSeconds = 1.5f;
         [Tooltip("Rulebook: peeking is a Night action. Tick this to enforce it.")]
@@ -133,11 +128,13 @@ namespace TDTS.UI
                 bool revealed = i == peekIndex;
 
                 // The owner always sees the front; the back only while peeking.
-                slots[i].background.color =
-                    revealed ? revealedColor : (card.HasMorningFront ? actionColor : hiddenColor);
+                // Colours match the Card Gallery (CardView).
+                Color color = CardView.ColorFor(card, revealed);
+                slots[i].background.color = color;
+                slots[i].label.color = CardView.TextColorOn(color);
                 slots[i].label.text = revealed
-                    ? $"{card.FrontName}\n<size=70%>Back: {card.BackName}</size>"
-                    : card.FrontName;
+                    ? $"<size=60%>BACK</size>\n{card.BackName}"
+                    : $"{card.FrontName}\n<size=60%>{CardView.TypeName(card, false)}</size>";
 
                 Outline outline = slots[i].root.GetComponent<Outline>();
                 if (outline != null) outline.enabled = card.HasMorningFront;

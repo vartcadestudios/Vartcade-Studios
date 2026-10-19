@@ -28,13 +28,20 @@ namespace TDTS.Managers
         [Tooltip("Rulebook: one main action per phase. Untick to test freely.")]
         [SerializeField] private bool limitActions = true;
 
+        // The spec has no hand limit, but the hand row only has 6 slots for now.
         public const int MaxHandSize = 6;
+        public const int StartingHandSize = 2;
+        public const int MaxPlayers = 6;
 
         [Header("Deck")]
         [SerializeField] private DeckRecipe deckRecipe = new DeckRecipe();
+        [Tooltip("0 = a new random game every time. Any other number deals the same game again.")]
+        [SerializeField] private int randomSeed = 0;
 
         private readonly List<CardData> deck = new List<CardData>();
         private readonly List<CardData> removedFromGame = new List<CardData>();
+        private System.Random rng;
+        private PlayerData localPlayer;
         private readonly List<string> playLog = new List<string>();
         private PlayerData selectedTarget;
         private int actionsLeft;
@@ -50,8 +57,16 @@ namespace TDTS.Managers
         public PlayerData SelectedTarget => selectedTarget;
         public IReadOnlyList<string> PlayLog => playLog;
 
-        // The player sitting at this device. Placeholder: first player in the list.
-        public PlayerData LocalPlayer => players.Count > 0 ? players[0] : null;
+        // The player sitting at this device. Placeholder: the first test player registered.
+        public PlayerData LocalPlayer => localPlayer;
+
+        /// <summary>The player sitting this many seats after you in turn order (1 = next), or null.</summary>
+        public PlayerData GetPlayerAfterLocal(int seatsAfter)
+        {
+            if (localPlayer == null || seatsAfter <= 0 || seatsAfter >= players.Count) return null;
+            int me = players.IndexOf(localPlayer);
+            return players[(me + seatsAfter) % players.Count];
+        }
 
         public event Action<GameState, GameState> OnStateChanged;
         public event Action OnHandsChanged;
@@ -72,17 +87,19 @@ namespace TDTS.Managers
 
         private void Start()
         {
-            BuildDeck();
-            SetUpTestPlayers();
-            TryTransition(GameState.DayPhase);
+            SetUpGame();
+            TryTransition(GameState.DayPhase); // clears the log, so the setup report comes after
+            AddLog("The Bunker Key has been shuffled into the deck.");
+            AddLog($"Turn order: {string.Join(" > ", players.Select(p => p.playerName))}");
+            AddLog($"Dealt {StartingHandSize} cards each. {deck.Count} cards left in the pool.");
         }
 
-        /// <summary>
-        /// PLACEHOLDER: registers 4 players and deals each the same fixed hand so the
-        /// hand row has something real to show. Replace with lobby/deck data later.
-        /// </summary>
-        private void SetUpTestPlayers()
+        /// <summary>Spec setup S1 to S5.</summary>
+        private void SetUpGame()
         {
+            rng = randomSeed == 0 ? new System.Random() : new System.Random(randomSeed);
+
+            // PLACEHOLDER: 4 test players on this device until the online lobby
             if (players.Count == 0)
             {
                 RegisterPlayer("You");
@@ -90,33 +107,49 @@ namespace TDTS.Managers
                 RegisterPlayer("Player 3");
                 RegisterPlayer("Player 4");
             }
+            localPlayer = players[0];
 
-            foreach (var p in players)
-            {
-                if (p.hand.Count > 0) continue;
-                p.hand.Add(new CardData { front = FrontType.Supply, frontSupply = SupplyKind.Food, back = BackType.Supply, backSupply = SupplyKind.Food });
-                p.hand.Add(new CardData { front = FrontType.Supply, frontSupply = SupplyKind.Water, back = BackType.Trash });
-                p.hand.Add(new CardData { front = FrontType.Supply, frontSupply = SupplyKind.Medicine, back = BackType.NightAction, nightAction = NightActionType.Flashlight });
-                p.hand.Add(new CardData { front = FrontType.MorningAction, morningAction = MorningActionType.SwapDeck, back = BackType.Supply, backSupply = SupplyKind.Water });
-            }
+            // S1: random seating
+            DeckBuilder.Shuffle(players, rng);
+
+            // S2, S3: pick the Key and shuffle it into the 72 cards
+            deck.Clear();
+            removedFromGame.Clear();
+            deck.AddRange(DeckBuilder.BuildDrawPile(deckRecipe, rng, removedFromGame));
+
+            // S4: deal one card at a time around the table
+            foreach (var p in players) p.hand.Clear();
+            for (int round = 0; round < StartingHandSize; round++)
+                foreach (var p in players)
+                    GiveCard(p, TakeTopCard());
+
+            // S5
+            currentDay = 1;
+
+            OnDeckChanged?.Invoke();
             OnHandsChanged?.Invoke();
         }
 
         public void RegisterPlayer(string playerName)
         {
-            if (players.Count >= 6) return;
+            if (players.Count >= MaxPlayers) return;
             players.Add(new PlayerData(playerName));
         }
 
-        // ---------- Deck ----------
+        // ---------- Cards ----------
 
-        /// <summary>72 cards + 1 random Bunker Key, shuffled (spec S2, S3).</summary>
-        private void BuildDeck()
+        private CardData TakeTopCard()
         {
-            deck.Clear();
-            removedFromGame.Clear();
-            deck.AddRange(DeckBuilder.BuildDrawPile(deckRecipe, new System.Random(), removedFromGame));
-            OnDeckChanged?.Invoke();
+            CardData card = deck[deck.Count - 1];
+            deck.RemoveAt(deck.Count - 1);
+            return card;
+        }
+
+        /// <summary>Puts a card in a hand. The new owner hasn't seen its back yet (spec R6).</summary>
+        private static void GiveCard(PlayerData to, CardData card)
+        {
+            card.peeked = false;
+            to.hand.Add(card);
         }
 
         // ---------- Actions ----------
@@ -163,9 +196,7 @@ namespace TDTS.Managers
             }
             if (!HasAction()) return false;
 
-            CardData card = deck[deck.Count - 1];
-            deck.RemoveAt(deck.Count - 1);
-            player.hand.Add(card);
+            GiveCard(player, TakeTopCard());
             SpendAction();
 
             AddLog($"{player.playerName} scavenged a card.");
@@ -204,7 +235,7 @@ namespace TDTS.Managers
             int i = UnityEngine.Random.Range(0, selectedTarget.hand.Count);
             CardData stolen = selectedTarget.hand[i];
             selectedTarget.hand.RemoveAt(i);
-            thief.hand.Add(stolen);
+            GiveCard(thief, stolen);
             SpendAction();
 
             AddLog($"{thief.playerName} stole a card from {selectedTarget.playerName}.");

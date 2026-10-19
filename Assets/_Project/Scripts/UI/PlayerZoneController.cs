@@ -9,8 +9,8 @@ namespace TDTS.UI
     /// <summary>An opponent's zone on the board: shows name and card count, tap to target.</summary>
     public class PlayerZoneController : MonoBehaviour
     {
-        [Tooltip("Position in GameManager's player list. 1 = Player 2, 2 = Player 3, 3 = Player 4.")]
-        [SerializeField] private int playerIndex = 1;
+        [Tooltip("Seats after you in turn order: 1 = left, 2 = top, 3 = right.")]
+        [SerializeField] private int seatsAfterYou = 1;
         [SerializeField] private TextMeshProUGUI label;
         [SerializeField] private Color selectedColor = new Color32(0xE8, 0x82, 0x3A, 255);
 
@@ -40,11 +40,7 @@ namespace TDTS.UI
             GameManager.Instance.OnTargetChanged -= Refresh;
         }
 
-        private PlayerData GetPlayer()
-        {
-            var players = GameManager.Instance.Players;
-            return playerIndex >= 0 && playerIndex < players.Count ? players[playerIndex] : null;
-        }
+        private PlayerData GetPlayer() => GameManager.Instance.GetPlayerAfterLocal(seatsAfterYou);
 
         private void OnClicked()
         {
@@ -60,7 +56,12 @@ namespace TDTS.UI
                 return;
             }
 
-            label.text = $"{p.playerName}\nCards: {p.hand.Count}";
+            var players = GameManager.Instance.Players;
+            int turn = 0;
+            for (int i = 0; i < players.Count; i++)
+                if (players[i] == p) turn = i + 1;
+
+            label.text = $"{p.playerName}\nCards: {p.hand.Count}\n<size=70%>Turn {turn} of {players.Count}</size>";
             if (background != null)
                 background.color = (GameManager.Instance.SelectedTarget == p) ? selectedColor : normalColor;
         }
