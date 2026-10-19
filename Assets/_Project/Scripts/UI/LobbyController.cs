@@ -6,6 +6,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TDTS.Networking;
+using static TDTS.UI.SundownArt;
 
 namespace TDTS.UI
 {
@@ -18,12 +19,6 @@ namespace TDTS.UI
     {
         [SerializeField] private string mainMenuSceneName = "MainMenu";
         [SerializeField] private string offlineGameSceneName = "Game";
-
-        // Night sky fading into a sundown glow
-        private static readonly Color SkyTop = new Color32(0x0B, 0x0E, 0x1A, 255);
-        private static readonly Color SkyMid = new Color32(0x1A, 0x1C, 0x33, 255);
-        private static readonly Color SkyGlow = new Color32(0x6B, 0x33, 0x1E, 255);
-        private static readonly Color SunColor = new Color32(0xF2, 0x8C, 0x3A, 255);
 
         private static readonly Color PanelColor = new Color32(0x12, 0x15, 0x22, 255);
         private static readonly Color PanelEdge = new Color32(0xFF, 0xFF, 0xFF, 22);
@@ -68,8 +63,6 @@ namespace TDTS.UI
             public GameObject youBadge;
         }
 
-        private static Sprite roundedSprite;
-        private static Sprite circleSprite;
 
         private void Start()
         {
@@ -543,88 +536,6 @@ namespace TDTS.UI
             image.pixelsPerUnitMultiplier = 32f / cornerScale;
             image.color = color;
             return image;
-        }
-
-        // ---------- Generated art (no texture files needed) ----------
-
-        /// <summary>A white rounded square with 32px corners, 9-sliced so it stretches to any size.</summary>
-        private static Sprite RoundedSprite()
-        {
-            if (roundedSprite != null) return roundedSprite;
-            const int radius = 32, size = radius * 2 + 2;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float dx = Mathf.Max(0f, Mathf.Abs(x + 0.5f - size / 2f) - (size / 2f - radius));
-                float dy = Mathf.Max(0f, Mathf.Abs(y + 0.5f - size / 2f) - (size / 2f - radius));
-                float alpha = Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
-                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-            }
-            tex.Apply();
-            roundedSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0,
-                SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
-            return roundedSprite;
-        }
-
-        private static Sprite CircleSprite()
-        {
-            if (circleSprite != null) return circleSprite;
-            const int size = 128;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(size / 2f, size / 2f));
-                tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(size / 2f - d)));
-            }
-            tex.Apply();
-            circleSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
-            return circleSprite;
-        }
-
-        private static Texture2D SkyTexture()
-        {
-            var tex = new Texture2D(1, 256, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < 256; y++)
-            {
-                float t = y / 255f; // 0 = bottom
-                Color c = t < 0.45f
-                    ? Color.Lerp(SkyGlow, SkyMid, Mathf.SmoothStep(0f, 1f, t / 0.45f))
-                    : Color.Lerp(SkyMid, SkyTop, Mathf.SmoothStep(0f, 1f, (t - 0.45f) / 0.55f));
-                tex.SetPixel(0, y, c);
-            }
-            tex.Apply();
-            return tex;
-        }
-
-        /// <summary>A soft round glow: bright core fading out, used for the setting sun.</summary>
-        private static Texture2D GlowTexture()
-        {
-            const int size = 256;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float d = Vector2.Distance(new Vector2(x, y), new Vector2(size / 2f, size / 2f)) / (size / 2f);
-                float core = d < 0.32f ? 1f : 0f;
-                float halo = Mathf.Pow(Mathf.Clamp01(1f - d), 2.2f);
-                tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(core * 0.9f + halo * 0.7f)));
-            }
-            tex.Apply();
-            return tex;
-        }
-
-        private static RectTransform NewRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax,
-            Vector2 offsetMin, Vector2 offsetMax)
-        {
-            var rect = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
-            rect.SetParent(parent, false);
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
-            return rect;
         }
 
         private static TextMeshProUGUI NewText(string name, Transform parent, float size, FontStyles style,

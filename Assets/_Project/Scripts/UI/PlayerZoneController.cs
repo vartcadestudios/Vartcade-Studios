@@ -32,6 +32,7 @@ namespace TDTS.UI
             GameView.Current.OnHandsChanged += Refresh;
             GameView.Current.OnTargetChanged += Refresh;
             GameView.Current.OnTurnChanged += Refresh;
+            GameView.Current.OnStateChanged += HandleStateChanged;
             Refresh();
         }
 
@@ -41,7 +42,10 @@ namespace TDTS.UI
             GameView.Current.OnTurnChanged -= Refresh;
             GameView.Current.OnHandsChanged -= Refresh;
             GameView.Current.OnTargetChanged -= Refresh;
+            GameView.Current.OnStateChanged -= HandleStateChanged;
         }
+
+        private void HandleStateChanged(GameState previous, GameState next) => Refresh();
 
         private PlayerData GetPlayer() => GameView.Current.GetPlayerAfterLocal(seatsAfterYou);
 
@@ -66,7 +70,9 @@ namespace TDTS.UI
 
             bool active = GameView.Current.ActivePlayer == p;
             string status = active ? "<b>Taking their turn...</b>" : $"Turn {turn} of {players.Count}";
-            label.text = $"{p.playerName}\nCards: {GameView.Current.HandCount(p)}\n<size=70%>{status}</size>";
+            // Eyes closed: you can't see how many cards anyone holds
+            string cards = GameView.Current.EyesClosed ? "?" : GameView.Current.HandCount(p).ToString();
+            label.text = $"{p.playerName}\nCards: {cards}\n<size=70%>{status}</size>";
 
             // Your pick for Trade / Steal wins over the "their turn" colour
             if (background != null)

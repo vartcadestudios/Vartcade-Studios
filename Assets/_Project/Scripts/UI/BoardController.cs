@@ -28,6 +28,13 @@ namespace TDTS.UI
         private bool wasLocalTurn;
         private float showOverlayAt;
 
+        private TableBackdrop backdrop;
+
+        private void Awake()
+        {
+            backdrop = gameObject.AddComponent<TableBackdrop>();
+        }
+
         private void Start()
         {
             if (GameView.Current == null) return;
@@ -59,7 +66,8 @@ namespace TDTS.UI
 
             dayButtons.SetActive(state == GameState.DayPhase);
             nightButtons.SetActive(state == GameState.NightPhase);
-            rondoWheel.SetActive(gm.CurrentDay >= rondoStartDay);
+            // The backdrop's sun is the Rondo wheel now; keep this one as a fallback
+            rondoWheel.SetActive(gm.CurrentDay >= rondoStartDay && (backdrop == null || !backdrop.ShowsRondo));
 
             if (rondoLabel != null)
                 rondoLabel.text = gm.TodaysRondo.HasValue
