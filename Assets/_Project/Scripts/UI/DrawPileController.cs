@@ -17,25 +17,25 @@ namespace TDTS.UI
             button.transition = Selectable.Transition.None;
             button.onClick.AddListener(OnClicked);
 
-            if (GameManager.Instance == null) return;
-            GameManager.Instance.OnDeckChanged += Refresh;
+            if (GameView.Current == null) return;
+            GameView.Current.OnDeckChanged += Refresh;
             Refresh();
         }
 
         private void OnDestroy()
         {
-            if (GameManager.Instance != null)
-                GameManager.Instance.OnDeckChanged -= Refresh;
+            if (GameView.Current != null)
+                GameView.Current.OnDeckChanged -= Refresh;
         }
 
         private void OnClicked()
         {
-            GameManager.Instance.DrawCard(GameManager.Instance.LocalPlayer);
+            GameView.Current.DrawForLocalPlayer();
         }
 
         private void Refresh()
         {
-            label.text = $"Draw\nPile\n{GameManager.Instance.DeckCount}";
+            label.text = $"<b>{GameView.Current.DeckCount}</b> <size=70%>left</size>";
         }
     }
 }
