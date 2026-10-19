@@ -948,7 +948,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9bc9577cbb3f71f49844de59553b2789, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TDTS.UI.MainMenuController
-  lobbySceneName: Game
+  lobbySceneName: Lobby
   howToPlayPanel: {fileID: 1762045428}
   settingsPanel: {fileID: 1378560073}
 --- !u!4 &286419477

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using TDTS.Data;
+using TDTS.Networking;
 
 namespace TDTS.Managers
 {
@@ -177,15 +178,30 @@ namespace TDTS.Managers
         {
             rng = randomSeed == 0 ? new System.Random() : new System.Random(randomSeed);
 
-            // PLACEHOLDER: 4 test players on this device until the online lobby
+            // Online: everyone from the lobby table, in join order. Offline: you plus 3 bots.
+            // Empty seats up to 4 are bots either way.
+            localPlayer = null;
             if (players.Count == 0)
             {
-                RegisterPlayer("You");
-                RegisterPlayer("Player 2");
-                RegisterPlayer("Player 3");
-                RegisterPlayer("Player 4");
+                SessionManager sessions = SessionManager.Instance;
+                if (sessions != null && sessions.InSession)
+                {
+                    foreach (SessionManager.SeatInfo seat in sessions.GetSeats())
+                    {
+                        RegisterPlayer(seat.name);
+                        if (seat.isYou) localPlayer = players[players.Count - 1];
+                    }
+                }
+                else
+                {
+                    string savedName = SessionManager.SavedPlayerName;
+                    RegisterPlayer(string.IsNullOrWhiteSpace(savedName) ? "You" : savedName.Trim());
+                }
+
+                while (players.Count < SessionManager.MinPlayers)
+                    RegisterPlayer($"Bot {players.Count}");
             }
-            localPlayer = players[0];
+            localPlayer ??= players[0];
 
             // S1: random seating
             DeckBuilder.Shuffle(players, rng);

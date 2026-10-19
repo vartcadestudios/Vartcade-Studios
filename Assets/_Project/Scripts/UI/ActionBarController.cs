@@ -48,6 +48,10 @@ namespace TDTS.UI
             acceptButton = CopyOf(scavengeButton, "Accept trade", () => gm.AnswerTradeForLocalPlayer(true));
             declineButton = CopyOf(scavengeButton, "Decline", () => gm.AnswerTradeForLocalPlayer(false));
             declineLabel = declineButton.GetComponentInChildren<TextMeshProUGUI>();
+
+            // The added buttons don't fit at their scene width, so let each row share its width out
+            FitToRow(scavengeButton);
+            FitToRow(stealButton);
         }
 
         private void Update()
@@ -93,6 +97,14 @@ namespace TDTS.UI
             copy.onClick.AddListener(onClick);
             SetLabel(copy, text);
             return copy;
+        }
+
+        private static void FitToRow(Button anyButtonInRow)
+        {
+            var row = anyButtonInRow.transform.parent.GetComponent<HorizontalLayoutGroup>();
+            if (row == null) return;
+            row.childControlWidth = true;
+            row.childForceExpandWidth = true;
         }
 
         private static void SetLabel(Button button, string text)
