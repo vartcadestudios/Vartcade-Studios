@@ -43,18 +43,20 @@ namespace TDTS.UI
                 button.onClick.AddListener(() => OnSlotClicked(index));
             }
 
-            if (GameManager.Instance == null) return;
+            if (GameView.Current == null) return;
 
-            GameManager.Instance.OnHandsChanged += HandleHandsChanged;
-            GameManager.Instance.OnTargetChanged += Refresh; // selected card changed
+            GameView.Current.OnHandsChanged += HandleHandsChanged;
+            GameView.Current.OnTargetChanged += Refresh; // selected card changed
+            GameView.Current.OnLocalPeek += Peek;
             Refresh(); // hands may already have been dealt before we subscribed
         }
 
         private void OnDestroy()
         {
-            if (GameManager.Instance == null) return;
-            GameManager.Instance.OnHandsChanged -= HandleHandsChanged;
-            GameManager.Instance.OnTargetChanged -= Refresh;
+            if (GameView.Current == null) return;
+            GameView.Current.OnHandsChanged -= HandleHandsChanged;
+            GameView.Current.OnTargetChanged -= Refresh;
+            GameView.Current.OnLocalPeek -= Peek;
         }
 
         private void HandleHandsChanged()
@@ -66,23 +68,23 @@ namespace TDTS.UI
 
         private void OnSlotClicked(int index)
         {
-            if (GameManager.Instance == null) return;
+            if (GameView.Current == null) return;
 
-            PlayerData me = GameManager.Instance.LocalPlayer;
+            PlayerData me = GameView.Current.LocalPlayer;
             if (me == null || index >= me.hand.Count) return;
 
             CardData card = me.hand[index];
-            GameState state = GameManager.Instance.CurrentState;
+            GameState state = GameView.Current.CurrentState;
 
             // Night: tapping a card you haven't seen is a Peek (costs 1 action).
             // Any other tap picks the card for Trade, Swap or Play card.
             if (state == GameState.NightPhase && !card.peeked)
             {
-                if (GameManager.Instance.PeekCard(me, index)) Peek(index);
+                GameView.Current.PeekForLocalPlayer(index); // OnLocalPeek flashes the back once it goes through
                 return;
             }
 
-            GameManager.Instance.SelectCard(index);
+            GameView.Current.SelectCard(index);
         }
 
         private void Peek(int index)
@@ -110,7 +112,7 @@ namespace TDTS.UI
 
         private void Refresh()
         {
-            PlayerData me = GameManager.Instance.LocalPlayer;
+            PlayerData me = GameView.Current.LocalPlayer;
 
             for (int i = 0; i < slots.Length; i++)
             {
@@ -136,7 +138,7 @@ namespace TDTS.UI
                 Outline outline = slots[i].root.GetComponent<Outline>();
                 if (outline != null)
                 {
-                    outline.enabled = i == GameManager.Instance.SelectedCardIndex;
+                    outline.enabled = i == GameView.Current.SelectedCardIndex;
                     outline.effectColor = SelectedBorder;
                     outline.effectDistance = new Vector2(5f, -5f);
                 }

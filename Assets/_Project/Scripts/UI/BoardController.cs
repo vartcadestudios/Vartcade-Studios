@@ -30,22 +30,22 @@ namespace TDTS.UI
 
         private void Start()
         {
-            if (GameManager.Instance == null) return;
+            if (GameView.Current == null) return;
 
             if (blackoutOverlay != null) overlayLabel = CreateOverlayLabel(blackoutOverlay.transform);
 
-            GameManager.Instance.OnStateChanged += HandleStateChanged;
-            GameManager.Instance.OnTurnChanged += Refresh;
-            GameManager.Instance.OnRondoSpun += HandleRondoSpun;
+            GameView.Current.OnStateChanged += HandleStateChanged;
+            GameView.Current.OnTurnChanged += Refresh;
+            GameView.Current.OnRondoSpun += HandleRondoSpun;
             Refresh(); // GameManager may already have changed state before we subscribed
         }
 
         private void OnDestroy()
         {
-            if (GameManager.Instance == null) return;
-            GameManager.Instance.OnStateChanged -= HandleStateChanged;
-            GameManager.Instance.OnTurnChanged -= Refresh;
-            GameManager.Instance.OnRondoSpun -= HandleRondoSpun;
+            if (GameView.Current == null) return;
+            GameView.Current.OnStateChanged -= HandleStateChanged;
+            GameView.Current.OnTurnChanged -= Refresh;
+            GameView.Current.OnRondoSpun -= HandleRondoSpun;
         }
 
         private void HandleStateChanged(GameState previous, GameState next) => Refresh();
@@ -54,7 +54,7 @@ namespace TDTS.UI
 
         private void Refresh()
         {
-            GameManager gm = GameManager.Instance;
+            IGameView gm = GameView.Current;
             GameState state = gm.CurrentState;
 
             dayButtons.SetActive(state == GameState.DayPhase);

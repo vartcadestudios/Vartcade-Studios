@@ -17,11 +17,11 @@ namespace TDTS.UI
 
         private void Update()
         {
-            if (GameManager.Instance == null) return;
+            if (GameView.Current == null) return;
 
-            dayText.text = $"Day {GameManager.Instance.CurrentDay} of {GameManager.Instance.SundownDay}";
+            dayText.text = $"Day {GameView.Current.CurrentDay} of {GameView.Current.SundownDay}";
 
-            string phase = GameManager.Instance.CurrentState switch
+            string phase = GameView.Current.CurrentState switch
             {
                 GameState.DayPhase => "Day phase",
                 GameState.NightPhase => "Night phase",
@@ -29,18 +29,18 @@ namespace TDTS.UI
                 _ => "..."
             };
 
-            var active = GameManager.Instance.ActivePlayer;
+            var active = GameView.Current.ActivePlayer;
             if (active == null)
                 phaseText.text = phase;
-            else if (GameManager.Instance.IsLocalTurn)
-                phaseText.text = $"{phase} - <b>Your turn</b> ({GameManager.Instance.ActionsLeft} AP)";
+            else if (GameView.Current.IsLocalTurn)
+                phaseText.text = $"{phase} - <b>Your turn</b> ({GameView.Current.ActionsLeft} AP)";
             else
                 phaseText.text = $"{phase} - {active.playerName}'s turn";
 
             // Seats are only filled at Sundown (spec R1)
-            bunkerText.text = GameManager.Instance.CurrentState == GameState.Sundown
-                ? $"Bunker {GameManager.Instance.BunkerSeated}/{GameManager.Instance.BunkerCapacity} seated"
-                : $"Bunker: {GameManager.Instance.BunkerCapacity} seats";
+            bunkerText.text = GameView.Current.CurrentState == GameState.Sundown
+                ? $"Bunker {GameView.Current.BunkerSeated}/{GameView.Current.BunkerCapacity} seated"
+                : $"Bunker: {GameView.Current.BunkerCapacity} seats";
         }
     }
 }

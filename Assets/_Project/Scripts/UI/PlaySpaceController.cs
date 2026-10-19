@@ -19,24 +19,24 @@ namespace TDTS.UI
         {
             FitLogToBox();
 
-            if (GameManager.Instance == null)
+            if (GameView.Current == null)
             {
                 label.text = emptyText;
                 return;
             }
-            GameManager.Instance.OnPlayLogChanged += Refresh;
+            GameView.Current.OnPlayLogChanged += Refresh;
             Refresh();
         }
 
         private void OnDestroy()
         {
-            if (GameManager.Instance != null)
-                GameManager.Instance.OnPlayLogChanged -= Refresh;
+            if (GameView.Current != null)
+                GameView.Current.OnPlayLogChanged -= Refresh;
         }
 
         private void Refresh()
         {
-            GameManager gm = GameManager.Instance;
+            IGameView gm = GameView.Current;
             var log = gm.PlayLog;
             var sb = new StringBuilder();
 

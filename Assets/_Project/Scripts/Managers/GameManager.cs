@@ -18,8 +18,9 @@ namespace TDTS.Managers
     /// <summary>
     /// Core state machine for game flow, following the FC01 Digital Port Spec.
     /// All transitions go through TryTransition/ResolveX methods. Never set state directly.
+    /// Runs offline and on the online host only; an online client hands the table to ClientGameView.
     /// </summary>
-    public class GameManager : MonoBehaviour
+    public class GameManager : MonoBehaviour, IGameView
     {
         public static GameManager Instance { get; private set; }
 
@@ -59,9 +60,10 @@ namespace TDTS.Managers
         private readonly List<CardData> deck = new List<CardData>();
         private readonly List<CardData> discardPile = new List<CardData>();
         private readonly List<CardData> removedFromGame = new List<CardData>();
-        private readonly List<string> playLog = new List<string>();
+        private readonly List<LogEntry> playLog = new List<LogEntry>();
         private System.Random rng;
         private PlayerData localPlayer;
+        private readonly HashSet<PlayerData> humans = new HashSet<PlayerData>();
         private PlayerData selectedTarget;
         private int selectedCardIndex = -1;
 
@@ -92,6 +94,17 @@ namespace TDTS.Managers
             public CardData card;
         }
 
+        /// <summary>
+        /// One play log line. With a viewer set, only that player reads the text; everyone else
+        /// reads forOthers, or nothing when it is null (spec C1).
+        /// </summary>
+        private struct LogEntry
+        {
+            public string text;
+            public PlayerData viewer;
+            public string forOthers;
+        }
+
         public GameState CurrentState => currentState;
         public int CurrentDay => currentDay;
         public int SundownDay => sundownDay;
@@ -105,11 +118,13 @@ namespace TDTS.Managers
         public int PeeksThisTurn => peeksThisTurn;
         public PlayerData SelectedTarget => selectedTarget;
         public int SelectedCardIndex => selectedCardIndex;
-        public IReadOnlyList<string> PlayLog => playLog;
+        public IReadOnlyList<string> PlayLog => LogFor(localPlayer);
         public PlayerData ActivePlayer => activeIndex >= 0 && activeIndex < players.Count ? players[activeIndex] : null;
         public bool IsLocalTurn => ActivePlayer != null && ActivePlayer == localPlayer;
         public int TurnNumber => turnNumber;
         public TradeOffer PendingTrade => pendingTrade;
+        public bool HasPendingTrade => pendingTrade != null;
+        public PlayerData TradeTo => pendingTrade?.to;
         public DayRule CurrentDayRule => dayRule;
         public RondoResult? TodaysRondo => todaysRondo;
         public bool TurnOrderReversed => turnDirection < 0;
@@ -119,8 +134,25 @@ namespace TDTS.Managers
             currentState == GameState.NightPhase ||
             (currentState == GameState.DayPhase && dayRule == DayRule.Blackout);
 
-        // The player sitting at this device. Placeholder: the first test player registered.
+        // The player sitting at this device (the host's own seat when online).
         public PlayerData LocalPlayer => localPlayer;
+
+        /// <summary>A person plays this seat (here or on another device), so bots leave it alone.</summary>
+        public bool IsHuman(PlayerData player) => player != null && humans.Contains(player);
+
+        /// <summary>
+        /// Online host: this person left the table. A bot takes over their seat so the game keeps
+        /// moving, including a turn or a trade answer they were in the middle of.
+        /// </summary>
+        public void ReleaseSeat(PlayerData player)
+        {
+            if (player == null || player == localPlayer || !humans.Remove(player)) return;
+            AddLog($"{player.playerName} left the table. A bot takes their seat.");
+            if (ActivePlayer == player) OnTurnChanged?.Invoke();
+            if (pendingTrade != null && pendingTrade.to == player) OnTradeOffered?.Invoke();
+        }
+
+        public int HandCount(PlayerData player) => player?.hand.Count ?? 0;
 
         /// <summary>The player sitting this many seats after you in turn order (1 = next), or null.</summary>
         public PlayerData GetPlayerAfterLocal(int seatsAfter)
@@ -141,15 +173,28 @@ namespace TDTS.Managers
         public event Action<RondoResult> OnRondoSpun;
         /// <summary>The local player learned the back of a card (Peek, Steal-Peek or Flashlight).</summary>
         public event Action<PlayerData, CardData> OnCardRevealedToYou;
+        /// <summary>The local player peeked at the card at this hand index.</summary>
+        public event Action<int> OnLocalPeek;
+        /// <summary>Any player peeked at the card at this hand index (the host tells that player's device).</summary>
+        public event Action<PlayerData, int> OnPeeked;
 
         private void Awake()
         {
+            // Online client: the host runs the rules, this device only shows its own seat.
+            if (NetworkGameBridge.IsOnlineClient)
+            {
+                gameObject.AddComponent<ClientGameView>();
+                enabled = false;
+                return;
+            }
+
             if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
                 return;
             }
             Instance = this;
+            GameView.Current = this;
         }
 
         private void Start()
@@ -159,6 +204,8 @@ namespace TDTS.Managers
 
             SetUpGame();
             TryTransition(GameState.DayPhase);
+
+            if (NetworkGameBridge.IsOnlineHost) NetworkGameBridge.SpawnForHost();
         }
 
         private void Update()
@@ -181,6 +228,7 @@ namespace TDTS.Managers
             // Online: everyone from the lobby table, in join order. Offline: you plus 3 bots.
             // Empty seats up to 4 are bots either way.
             localPlayer = null;
+            humans.Clear();
             if (players.Count == 0)
             {
                 SessionManager sessions = SessionManager.Instance;
@@ -189,7 +237,10 @@ namespace TDTS.Managers
                     foreach (SessionManager.SeatInfo seat in sessions.GetSeats())
                     {
                         RegisterPlayer(seat.name);
-                        if (seat.isYou) localPlayer = players[players.Count - 1];
+                        PlayerData added = players[players.Count - 1];
+                        added.accountId = seat.playerId;
+                        humans.Add(added);
+                        if (seat.isYou) localPlayer = added;
                     }
                 }
                 else
@@ -202,6 +253,7 @@ namespace TDTS.Managers
                     RegisterPlayer($"Bot {players.Count}");
             }
             localPlayer ??= players[0];
+            humans.Add(localPlayer);
 
             // S1: random seating
             DeckBuilder.Shuffle(players, rng);
@@ -259,13 +311,18 @@ namespace TDTS.Managers
 
         // ---------- Log ----------
 
-        private void AddLog(string line)
+        private void AddLog(string line) => AddLog(new LogEntry { text = line });
+
+        private void AddLog(LogEntry entry)
         {
-            playLog.Add(line);
-            if (playLog.Count > 20) playLog.RemoveAt(0);
-            Debug.Log($"[GameManager] {line}");
+            playLog.Add(entry);
+            if (playLog.Count > 40) playLog.RemoveAt(0);
+            Debug.Log($"[GameManager] {entry.text}{(entry.viewer != null ? $" (only {entry.viewer.playerName} sees this)" : "")}");
             OnPlayLogChanged?.Invoke();
         }
+
+        /// <summary>A line only this player sees, like "your hand is full" or a Flashlight result.</summary>
+        private void Tell(PlayerData player, string line) => AddLog(new LogEntry { text = line, viewer = player });
 
         /// <summary>
         /// Logs a player's action. With eyes closed (Night, Blackout) only the acting player
@@ -273,10 +330,29 @@ namespace TDTS.Managers
         /// </summary>
         private void LogAction(PlayerData actor, string details)
         {
-            if (EyesClosed && actor != localPlayer)
-                AddLog($"{actor.playerName} did something in the dark.");
+            if (EyesClosed)
+                AddLog(new LogEntry { text = details, viewer = actor, forOthers = $"{actor.playerName} did something in the dark." });
             else
                 AddLog(details);
+        }
+
+        /// <summary>A result everyone sees by day, but only the acting player sees with eyes closed.</summary>
+        private void LogSecret(PlayerData actor, string line)
+        {
+            if (EyesClosed) Tell(actor, line);
+            else AddLog(line);
+        }
+
+        /// <summary>The play log as this player is allowed to read it.</summary>
+        public List<string> LogFor(PlayerData seat)
+        {
+            var lines = new List<string>(playLog.Count);
+            foreach (LogEntry e in playLog)
+            {
+                string line = e.viewer == null || e.viewer == seat ? e.text : e.forOthers;
+                if (line != null) lines.Add(line);
+            }
+            return lines;
         }
 
         /// <summary>Hand contents moved, so a selected card index may now point at a different card.</summary>
@@ -295,25 +371,25 @@ namespace TDTS.Managers
 
             if (currentState != phase)
             {
-                AddLog($"{actionName} is a {(phase == GameState.DayPhase ? "Day" : "Night")} action.");
+                Tell(player, $"{actionName} is a {(phase == GameState.DayPhase ? "Day" : "Night")} action.");
                 return false;
             }
             if (player != ActivePlayer)
             {
-                AddLog($"It's {ActivePlayer?.playerName}'s turn.");
+                Tell(player, $"It's {ActivePlayer?.playerName}'s turn.");
                 return false;
             }
             if (pendingTrade != null)
             {
-                AddLog("Waiting for an answer to the trade.");
+                Tell(player, "Waiting for an answer to the trade.");
                 return false;
             }
-            if (!HasAction()) return false;
+            if (!HasAction(player)) return false;
 
             // R4: the last Night action must be a peek if you haven't peeked yet
             if (phase == GameState.NightPhase && !isPeek && MustPeekNow(player))
             {
-                AddLog("You must peek at least once tonight. Tap one of your cards.");
+                Tell(player, "You must peek at least once tonight. Tap one of your cards.");
                 return false;
             }
             return true;
@@ -322,10 +398,10 @@ namespace TDTS.Managers
         private bool MustPeekNow(PlayerData player) =>
             limitActions && actionsLeft == 1 && peeksThisTurn == 0 && player.hand.Count > 0;
 
-        private bool HasAction()
+        private bool HasAction(PlayerData player)
         {
             if (!limitActions || actionsLeft > 0) return true;
-            AddLog("No actions left this turn.");
+            Tell(player, "No actions left this turn.");
             return false;
         }
 
@@ -346,17 +422,17 @@ namespace TDTS.Managers
 
             if (dayRule == DayRule.TradingOnly)
             {
-                AddLog("Trading Only today: no Scavenge.");
+                Tell(player, "Trading Only today: no Scavenge.");
                 return false;
             }
             if (deck.Count == 0)
             {
-                AddLog("The draw pile is empty.");
+                Tell(player, "The draw pile is empty.");
                 return false;
             }
             if (player.hand.Count >= MaxHandSize)
             {
-                AddLog("Your hand is full.");
+                Tell(player, "Your hand is full.");
                 return false;
             }
 
@@ -375,17 +451,17 @@ namespace TDTS.Managers
 
             if (to == null || to == from)
             {
-                AddLog("Tap a player first, then Trade.");
+                Tell(from, "Tap a player first, then Trade.");
                 return false;
             }
             if (handIndex < 0 || handIndex >= from.hand.Count)
             {
-                AddLog("Tap one of your cards first, then Trade.");
+                Tell(from, "Tap one of your cards first, then Trade.");
                 return false;
             }
             if (to.hand.Count == 0)
             {
-                AddLog($"{to.playerName} has no cards to trade.");
+                Tell(from, $"{to.playerName} has no cards to trade.");
                 return false;
             }
 
@@ -450,6 +526,8 @@ namespace TDTS.Managers
             if (player == localPlayer) OnCardRevealedToYou?.Invoke(player, card);
 
             OnHandsChanged?.Invoke(); // selection stays: no card moved
+            OnPeeked?.Invoke(player, handIndex);
+            if (player == localPlayer) OnLocalPeek?.Invoke(handIndex);
             SpendAction();
             return true;
         }
@@ -461,17 +539,17 @@ namespace TDTS.Managers
 
             if (victim == null || victim == thief)
             {
-                AddLog("Tap a player first, then Steal.");
+                Tell(thief, "Tap a player first, then Steal.");
                 return false;
             }
             if (victim.hand.Count == 0)
             {
-                AddLog($"{victim.playerName} has no cards.");
+                Tell(thief, $"{victim.playerName} has no cards.");
                 return false;
             }
             if (thief.hand.Count >= MaxHandSize)
             {
-                AddLog("Your hand is full.");
+                Tell(thief, "Your hand is full.");
                 return false;
             }
 
@@ -492,17 +570,17 @@ namespace TDTS.Managers
 
             if (target == null || target == player)
             {
-                AddLog("Tap a player first, then Swap.");
+                Tell(player, "Tap a player first, then Swap.");
                 return false;
             }
             if (handIndex < 0 || handIndex >= player.hand.Count)
             {
-                AddLog("Tap one of your peeked cards to pick it, then Swap.");
+                Tell(player, "Tap one of your peeked cards to pick it, then Swap.");
                 return false;
             }
             if (target.hand.Count == 0)
             {
-                AddLog($"{target.playerName} has no cards.");
+                Tell(player, $"{target.playerName} has no cards.");
                 return false;
             }
 
@@ -539,7 +617,7 @@ namespace TDTS.Managers
 
             if (!allowed)
             {
-                AddLog(currentState == GameState.NightPhase && card.HasNightBack
+                Tell(player, currentState == GameState.NightPhase && card.HasNightBack
                     ? "Peek at a Night card before playing it."
                     : $"{cardName} can't be played during {currentState}.");
                 return false;
@@ -547,7 +625,7 @@ namespace TDTS.Managers
             if (!CanAct(player, currentState, "Play card")) return false;
             if (isDay && dayRule == DayRule.TradingOnly)
             {
-                AddLog("Trading Only today: no Action Cards.");
+                Tell(player, "Trading Only today: no Action Cards.");
                 return false;
             }
             if (!NeedsTarget(card, isDay))
@@ -556,7 +634,7 @@ namespace TDTS.Managers
             }
             else if (target == null || target == player)
             {
-                AddLog($"Tap a player first, then play {cardName}.");
+                Tell(player, $"Tap a player first, then play {cardName}.");
                 return false;
             }
 
@@ -642,21 +720,18 @@ namespace TDTS.Managers
                     card.batteries--;
                     if (target.hand.Count == 0) break;
                     CardData seen = target.hand[rng.Next(target.hand.Count)];
-                    if (player == localPlayer)
-                    {
-                        AddLog($"Flashlight: one of {target.playerName}'s cards is {seen.BackName}. ({card.batteries} batteries left)");
-                        OnCardRevealedToYou?.Invoke(target, seen);
-                    }
+                    Tell(player, $"Flashlight: one of {target.playerName}'s cards is {seen.BackName}. ({card.batteries} batteries left)");
+                    if (player == localPlayer) OnCardRevealedToYou?.Invoke(target, seen);
                     break;
 
                 case NightActionType.TargetedNightSkip:
                     target.nightSkip = true;
-                    if (!EyesClosed || player == localPlayer) AddLog($"{target.playerName} will lose their next Night turn.");
+                    LogSecret(player, $"{target.playerName} will lose their next Night turn.");
                     break;
 
                 case NightActionType.TargetedDaySkip:
                     target.daySkip = true;
-                    if (!EyesClosed || player == localPlayer) AddLog($"{target.playerName} will lose their next Day turn.");
+                    LogSecret(player, $"{target.playerName} will lose their next Day turn.");
                     break;
             }
         }
@@ -677,7 +752,7 @@ namespace TDTS.Managers
 
             if (currentState == GameState.NightPhase && peeksThisTurn == 0 && player.hand.Count > 0 && limitActions)
             {
-                AddLog("You must peek at least once before ending your Night turn.");
+                Tell(player, "You must peek at least once before ending your Night turn.");
                 return false;
             }
 
@@ -696,26 +771,31 @@ namespace TDTS.Managers
         // Kept so the old Skip button binding still compiles; at Night it now ends your turn.
         public void SkipForLocalPlayer() { PassTurn(LocalPlayer); }
 
-        public void PlaySelectedForLocalPlayer()
+        public void PeekForLocalPlayer(int handIndex) { PeekCard(LocalPlayer, handIndex); }
+        public void PlaySelectedForLocalPlayer() { PlayChosenCard(LocalPlayer, selectedCardIndex, selectedTarget); }
+        public void AnswerTradeForLocalPlayer(bool accept) { AnswerTrade(LocalPlayer, accept, selectedCardIndex); }
+
+        /// <summary>Play card button: the card this player picked, on the player they picked.</summary>
+        public bool PlayChosenCard(PlayerData player, int handIndex, PlayerData target)
         {
-            if (selectedCardIndex < 0)
+            if (handIndex < 0)
             {
-                AddLog("Tap one of your cards first, then Play card.");
-                return;
+                Tell(player, "Tap one of your cards first, then Play card.");
+                return false;
             }
-            PlayCard(LocalPlayer, selectedCardIndex, selectedTarget);
+            return PlayCard(player, handIndex, target);
         }
 
-        /// <summary>The local player answers a trade a bot offered them: accept gives away their selected card.</summary>
-        public void AnswerTradeForLocalPlayer(bool accept)
+        /// <summary>A person answers a trade offered to them: accept gives away the card at handIndex.</summary>
+        public void AnswerTrade(PlayerData player, bool accept, int handIndex)
         {
-            if (pendingTrade == null || pendingTrade.to != localPlayer) return;
-            if (accept && selectedCardIndex < 0)
+            if (pendingTrade == null || pendingTrade.to != player) return;
+            if (accept && handIndex < 0)
             {
-                AddLog("Tap the card you'll give in return, then Accept.");
+                Tell(player, "Tap the card you'll give in return, then Accept.");
                 return;
             }
-            RespondToTrade(accept, selectedCardIndex);
+            RespondToTrade(accept, handIndex);
         }
 
         // ---------- Selection ----------

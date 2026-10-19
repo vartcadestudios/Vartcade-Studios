@@ -28,26 +28,26 @@ namespace TDTS.UI
             button.transition = Selectable.Transition.None;
             button.onClick.AddListener(OnClicked);
 
-            if (GameManager.Instance == null) return;
-            GameManager.Instance.OnHandsChanged += Refresh;
-            GameManager.Instance.OnTargetChanged += Refresh;
-            GameManager.Instance.OnTurnChanged += Refresh;
+            if (GameView.Current == null) return;
+            GameView.Current.OnHandsChanged += Refresh;
+            GameView.Current.OnTargetChanged += Refresh;
+            GameView.Current.OnTurnChanged += Refresh;
             Refresh();
         }
 
         private void OnDestroy()
         {
-            if (GameManager.Instance == null) return;
-            GameManager.Instance.OnTurnChanged -= Refresh;
-            GameManager.Instance.OnHandsChanged -= Refresh;
-            GameManager.Instance.OnTargetChanged -= Refresh;
+            if (GameView.Current == null) return;
+            GameView.Current.OnTurnChanged -= Refresh;
+            GameView.Current.OnHandsChanged -= Refresh;
+            GameView.Current.OnTargetChanged -= Refresh;
         }
 
-        private PlayerData GetPlayer() => GameManager.Instance.GetPlayerAfterLocal(seatsAfterYou);
+        private PlayerData GetPlayer() => GameView.Current.GetPlayerAfterLocal(seatsAfterYou);
 
         private void OnClicked()
         {
-            GameManager.Instance.SelectTarget(GetPlayer());
+            GameView.Current.SelectTarget(GetPlayer());
         }
 
         private void Refresh()
@@ -59,18 +59,18 @@ namespace TDTS.UI
                 return;
             }
 
-            var players = GameManager.Instance.Players;
+            var players = GameView.Current.Players;
             int turn = 0;
             for (int i = 0; i < players.Count; i++)
                 if (players[i] == p) turn = i + 1;
 
-            bool active = GameManager.Instance.ActivePlayer == p;
+            bool active = GameView.Current.ActivePlayer == p;
             string status = active ? "<b>Taking their turn...</b>" : $"Turn {turn} of {players.Count}";
-            label.text = $"{p.playerName}\nCards: {p.hand.Count}\n<size=70%>{status}</size>";
+            label.text = $"{p.playerName}\nCards: {GameView.Current.HandCount(p)}\n<size=70%>{status}</size>";
 
             // Your pick for Trade / Steal wins over the "their turn" colour
             if (background != null)
-                background.color = GameManager.Instance.SelectedTarget == p ? selectedColor
+                background.color = GameView.Current.SelectedTarget == p ? selectedColor
                     : active ? activeColor
                     : normalColor;
         }

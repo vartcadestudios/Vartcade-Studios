@@ -30,7 +30,7 @@ namespace TDTS.UI
 
         private void Start()
         {
-            GameManager gm = GameManager.Instance;
+            IGameView gm = GameView.Current;
             if (gm == null) return;
 
             tradeButton.onClick.AddListener(gm.TradeSelectedForLocalPlayer);
@@ -56,11 +56,11 @@ namespace TDTS.UI
 
         private void Update()
         {
-            GameManager gm = GameManager.Instance;
+            IGameView gm = GameView.Current;
             if (gm == null) return;
 
-            bool offeredToMe = gm.PendingTrade != null && gm.PendingTrade.to == gm.LocalPlayer;
-            bool myTurn = gm.IsLocalTurn && gm.PendingTrade == null;
+            bool offeredToMe = gm.HasPendingTrade && gm.TradeTo == gm.LocalPlayer;
+            bool myTurn = gm.IsLocalTurn && !gm.HasPendingTrade;
             bool day = myTurn && gm.CurrentState == GameState.DayPhase;
             bool night = myTurn && gm.CurrentState == GameState.NightPhase;
             bool tradingOnly = gm.CurrentDayRule == DayRule.TradingOnly;

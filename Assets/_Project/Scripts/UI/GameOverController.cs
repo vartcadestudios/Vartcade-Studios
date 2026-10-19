@@ -22,14 +22,14 @@ namespace TDTS.UI
 
         private void Start()
         {
-            if (GameManager.Instance != null)
-                GameManager.Instance.OnStateChanged += HandleStateChanged;
+            if (GameView.Current != null)
+                GameView.Current.OnStateChanged += HandleStateChanged;
         }
 
         private void OnDestroy()
         {
-            if (GameManager.Instance != null)
-                GameManager.Instance.OnStateChanged -= HandleStateChanged;
+            if (GameView.Current != null)
+                GameView.Current.OnStateChanged -= HandleStateChanged;
         }
 
         private void HandleStateChanged(GameState previous, GameState next)
@@ -37,7 +37,7 @@ namespace TDTS.UI
             if (next != GameState.Sundown) return;
 
             // Spec R1/R2: survivors first, each with the reason
-            var lines = GameManager.Instance.Players
+            var lines = GameView.Current.Players
                 .OrderByDescending(p => p.isSeated)
                 .Select(p => p.isSeated
                     ? $"<color=#7BD88F><b>{p.playerName}: SURVIVED</b></color>  <size=70%>({p.resultReason})</size>"

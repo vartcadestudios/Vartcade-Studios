@@ -41,6 +41,10 @@ namespace TDTS.Networking
         /// <summary>A line for the Lobby status bar (errors included).</summary>
         public event Action<string> OnStatus;
 
+        /// <summary>Host: every device has finished loading the Game scene, so it is safe to spawn into it.</summary>
+        public bool EveryoneLoadedGame { get; private set; }
+        public event Action OnEveryoneLoadedGame;
+
         public static SessionManager GetOrCreate()
         {
             if (Instance == null)
@@ -76,18 +80,20 @@ namespace TDTS.Networking
         /// <summary>The session hands Relay to Netcode through NetworkManager.Singleton, so make one if the scene has none.</summary>
         private static void EnsureNetworkManager()
         {
-            if (NetworkManager.Singleton != null) return;
-
-            var go = new GameObject("NetworkManager");
-            DontDestroyOnLoad(go);
-            var transport = go.AddComponent<UnityTransport>();
-            var manager = go.AddComponent<NetworkManager>();
-            manager.NetworkConfig = new NetworkConfig
+            if (NetworkManager.Singleton == null)
             {
-                NetworkTransport = transport,
-                EnableSceneManagement = true,
-                ConnectionApproval = false,
-            };
+                var go = new GameObject("NetworkManager");
+                DontDestroyOnLoad(go);
+                var transport = go.AddComponent<UnityTransport>();
+                var manager = go.AddComponent<NetworkManager>();
+                manager.NetworkConfig = new NetworkConfig
+                {
+                    NetworkTransport = transport,
+                    EnableSceneManagement = true,
+                    ConnectionApproval = false,
+                };
+            }
+            NetworkGameBridge.RegisterPrefab(NetworkManager.Singleton);
         }
 
         private Task SignInAsync()
@@ -172,7 +178,18 @@ namespace TDTS.Networking
                 Debug.LogWarning($"[Session] Could not lock the table: {e.Message}");
             }
 
+            EveryoneLoadedGame = false;
+            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= HandleLoadEventCompleted;
+            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += HandleLoadEventCompleted;
             NetworkManager.Singleton.SceneManager.LoadScene(gameSceneName, LoadSceneMode.Single);
+        }
+
+        private void HandleLoadEventCompleted(string sceneName, LoadSceneMode mode, List<ulong> loaded, List<ulong> timedOut)
+        {
+            if (sceneName != gameSceneName) return;
+            if (timedOut.Count > 0) Debug.LogWarning($"[Session] {timedOut.Count} player(s) took too long to load the game.");
+            EveryoneLoadedGame = true;
+            OnEveryoneLoadedGame?.Invoke();
         }
 
         // ---------- Players ----------

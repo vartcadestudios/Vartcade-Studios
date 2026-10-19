@@ -9,6 +9,8 @@ namespace TDTS.Data
     public class PlayerData
     {
         public string playerName;
+        // Online: the Unity Gaming Services player id of the person in this seat. Empty for bots and offline.
+        public string accountId = "";
         public List<CardData> hand = new List<CardData>();
 
         // Spec V10: lose your next Day / Night turn

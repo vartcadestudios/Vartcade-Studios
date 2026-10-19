@@ -7,8 +7,9 @@ using TDTS.Data;
 namespace TDTS.Managers
 {
     /// <summary>
-    /// PLACEHOLDER until online multiplayer: takes the turns of every seat except
-    /// LocalPlayer with simple random choices, so a whole game keeps moving.
+    /// Takes the turns of every seat no person is sitting in (offline: everyone but you;
+    /// online: the empty seats) with simple random choices, so a whole game keeps moving.
+    /// Runs only where GameManager runs the rules: offline, or on the online host.
     /// GameManager adds this automatically when "Bots Play Other Seats" is ticked.
     /// </summary>
     public class BotController : MonoBehaviour
@@ -40,7 +41,7 @@ namespace TDTS.Managers
         private void HandleTurnChanged()
         {
             PlayerData active = gm.ActivePlayer;
-            if (active == null || active == gm.LocalPlayer || handledTurn == gm.TurnNumber) return;
+            if (active == null || gm.IsHuman(active) || handledTurn == gm.TurnNumber) return;
 
             handledTurn = gm.TurnNumber;
             StartCoroutine(TakeTurn(active, gm.TurnNumber));
@@ -68,8 +69,8 @@ namespace TDTS.Managers
             float roll = Random.value;
             bool tradingOnly = gm.CurrentDayRule == DayRule.TradingOnly;
 
-            // Never offer the local player a trade with eyes closed: they couldn't see it
-            var partners = Others(bot).Where(p => p.hand.Count > 0 && (!gm.EyesClosed || p != gm.LocalPlayer)).ToList();
+            // Never offer a person a trade with eyes closed: they couldn't see it
+            var partners = Others(bot).Where(p => p.hand.Count > 0 && (!gm.EyesClosed || !gm.IsHuman(p))).ToList();
             if (bot.hand.Count > 0 && partners.Count > 0 && (tradingOnly || roll < 0.15f))
                 return gm.OfferTrade(bot, Random.Range(0, bot.hand.Count), Pick(partners));
 
@@ -119,7 +120,7 @@ namespace TDTS.Managers
         private void HandleTradeOffered()
         {
             GameManager.TradeOffer trade = gm.PendingTrade;
-            if (trade == null || trade.to == gm.LocalPlayer) return;
+            if (trade == null || gm.IsHuman(trade.to)) return;
             StartCoroutine(AnswerTrade(trade));
         }
 
