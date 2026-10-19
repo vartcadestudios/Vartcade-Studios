@@ -2991,6 +2991,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1128248813}
+  - component: {fileID: 2000000004}
   m_Layer: 5
   m_Name: HandArea
   m_TagString: Untagged
@@ -7895,3 +7896,21 @@ MonoBehaviour:
   seatsAfterYou: 3
   label: {fileID: 1548456035}
   selectedColor: {r: 0.9098039, g: 0.50980395, b: 0.22745098, a: 1}
+--- !u!114 &2000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1128248812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d640dab15d44485aa541356e3bbd8786, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TDTS.UI.ActionBarController
+  tradeButton: {fileID: 892882928}
+  scavengeButton: {fileID: 1305101011}
+  playCardButton: {fileID: 376913781}
+  stealButton: {fileID: 284585395}
+  swapButton: {fileID: 1501015931}
+  skipButton: {fileID: 383517085}

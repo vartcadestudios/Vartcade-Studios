@@ -13,6 +13,7 @@ namespace TDTS.UI
         [SerializeField] private int seatsAfterYou = 1;
         [SerializeField] private TextMeshProUGUI label;
         [SerializeField] private Color selectedColor = new Color32(0xE8, 0x82, 0x3A, 255);
+        [SerializeField] private Color activeColor = new Color32(0x3C, 0x7A, 0x4E, 255);
 
         private Image background;
         private Color normalColor;
@@ -30,12 +31,14 @@ namespace TDTS.UI
             if (GameManager.Instance == null) return;
             GameManager.Instance.OnHandsChanged += Refresh;
             GameManager.Instance.OnTargetChanged += Refresh;
+            GameManager.Instance.OnTurnChanged += Refresh;
             Refresh();
         }
 
         private void OnDestroy()
         {
             if (GameManager.Instance == null) return;
+            GameManager.Instance.OnTurnChanged -= Refresh;
             GameManager.Instance.OnHandsChanged -= Refresh;
             GameManager.Instance.OnTargetChanged -= Refresh;
         }
@@ -61,9 +64,15 @@ namespace TDTS.UI
             for (int i = 0; i < players.Count; i++)
                 if (players[i] == p) turn = i + 1;
 
-            label.text = $"{p.playerName}\nCards: {p.hand.Count}\n<size=70%>Turn {turn} of {players.Count}</size>";
+            bool active = GameManager.Instance.ActivePlayer == p;
+            string status = active ? "<b>Taking their turn...</b>" : $"Turn {turn} of {players.Count}";
+            label.text = $"{p.playerName}\nCards: {p.hand.Count}\n<size=70%>{status}</size>";
+
+            // Your pick for Trade / Steal wins over the "their turn" colour
             if (background != null)
-                background.color = (GameManager.Instance.SelectedTarget == p) ? selectedColor : normalColor;
+                background.color = GameManager.Instance.SelectedTarget == p ? selectedColor
+                    : active ? activeColor
+                    : normalColor;
         }
     }
 }

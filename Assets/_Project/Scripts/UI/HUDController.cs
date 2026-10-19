@@ -21,13 +21,21 @@ namespace TDTS.UI
 
             dayText.text = $"Day {GameManager.Instance.CurrentDay}";
 
-            phaseText.text = GameManager.Instance.CurrentState switch
+            string phase = GameManager.Instance.CurrentState switch
             {
                 GameState.DayPhase => "Day phase",
                 GameState.NightPhase => "Night phase",
                 GameState.Sundown => "Sundown",
                 _ => "..."
             };
+
+            var active = GameManager.Instance.ActivePlayer;
+            if (active == null)
+                phaseText.text = phase;
+            else if (GameManager.Instance.IsLocalTurn)
+                phaseText.text = $"{phase} - <b>Your turn</b> ({GameManager.Instance.ActionsLeft} AP)";
+            else
+                phaseText.text = $"{phase} - {active.playerName}'s turn";
 
             bunkerText.text = $"Bunker {GameManager.Instance.BunkerSeated}/{GameManager.Instance.BunkerCapacity} seated";
         }

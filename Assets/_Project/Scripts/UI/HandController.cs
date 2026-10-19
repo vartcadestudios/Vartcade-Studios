@@ -24,6 +24,8 @@ namespace TDTS.UI
         [Header("Card Slots (assign in Inspector)")]
         [SerializeField] private CardSlotView[] slots;
 
+        private static readonly Color SelectedBorder = new Color32(0xFF, 0xD5, 0x4A, 255);
+
         [Header("Peek")]
         [SerializeField] private float peekSeconds = 1.5f;
         [Tooltip("Rulebook: peeking is a Night action. Tick this to enforce it.")]
@@ -46,13 +48,15 @@ namespace TDTS.UI
             if (GameManager.Instance == null) return;
 
             GameManager.Instance.OnHandsChanged += HandleHandsChanged;
+            GameManager.Instance.OnTargetChanged += Refresh; // selected card changed
             Refresh(); // hands may already have been dealt before we subscribed
         }
 
         private void OnDestroy()
         {
-            if (GameManager.Instance != null)
-                GameManager.Instance.OnHandsChanged -= HandleHandsChanged;
+            if (GameManager.Instance == null) return;
+            GameManager.Instance.OnHandsChanged -= HandleHandsChanged;
+            GameManager.Instance.OnTargetChanged -= Refresh;
         }
 
         private void HandleHandsChanged()
@@ -72,11 +76,14 @@ namespace TDTS.UI
             CardData card = me.hand[index];
             GameState state = GameManager.Instance.CurrentState;
 
-            bool playable =
-                (state == GameState.DayPhase && card.HasMorningFront) ||
-                (state == GameState.NightPhase && card.HasNightBack && card.peeked);
+            // Day: tap picks the card for Trade or Play card
+            if (state == GameState.DayPhase)
+            {
+                GameManager.Instance.SelectCard(index);
+                return;
+            }
 
-            if (playable)
+            if (state == GameState.NightPhase && card.HasNightBack && card.peeked)
             {
                 GameManager.Instance.PlayCard(me, index);
                 return;
@@ -136,8 +143,14 @@ namespace TDTS.UI
                     ? $"<size=60%>BACK</size>\n{card.BackName}"
                     : $"{card.FrontName}\n<size=60%>{CardView.TypeName(card, false)}</size>";
 
+                // Thick gold border on the card picked for Trade / Play card
                 Outline outline = slots[i].root.GetComponent<Outline>();
-                if (outline != null) outline.enabled = card.HasMorningFront;
+                if (outline != null)
+                {
+                    outline.enabled = i == GameManager.Instance.SelectedCardIndex;
+                    outline.effectColor = SelectedBorder;
+                    outline.effectDistance = new Vector2(5f, -5f);
+                }
             }
         }
     }
