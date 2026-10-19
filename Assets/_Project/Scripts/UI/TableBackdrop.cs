@@ -13,7 +13,7 @@ namespace TDTS.UI
     /// - Rondo sun: from the Rondo's first day the sun is the Rondo wheel; it spins to each result
     ///   and the sky flashes that result's colour.
     /// - Night flip: with eyes closed (Night, Blackout) the sky goes dark, the sun drops away, the
-    ///   opponents' side of the table dims and a flashlight beam stays on your own hand.
+    ///   opponents' side of the table dims and a pool of flashlight stays on your own hand.
     /// BoardController adds this at runtime; it finds the canvas pieces by name.
     /// </summary>
     public class TableBackdrop : MonoBehaviour
@@ -27,15 +27,13 @@ namespace TDTS.UI
 
         private static readonly Color GroundDay = new Color32(0x12, 0x15, 0x22, 255);
         private static readonly Color GroundNight = new Color32(0x06, 0x07, 0x0D, 255);
-        private static readonly Color Accent = new Color32(0xE0, 0x7A, 0x2E, 255);
         private static readonly Color WedgeDark = new Color32(0xC2, 0x5A, 0x22, 255);
         private static readonly Color WedgeLit = new Color32(0xFA, 0xC7, 0x75, 255);
         private static readonly Color TrailPast = new Color32(0xE0, 0x7A, 0x2E, 150);
         private static readonly Color TrailAhead = new Color32(0x5C, 0x62, 0x74, 150);
         private static readonly Color TrailSundown = new Color32(0xD9, 0x3B, 0x3B, 220);
-        private static readonly Color PanelColor = new Color32(0x12, 0x15, 0x22, 190);
-        private static readonly Color BeamColor = new Color32(0xF2, 0xE3, 0xB0, 255);
-        private static readonly Color TextColor = new Color32(0xE8, 0xE4, 0xDA, 255);
+        private static readonly Color GlassColor = new Color32(0x12, 0x15, 0x22, 190);
+        private static readonly Color LightColor = new Color32(0xF2, 0xE3, 0xB0, 255);
 
         private IGameView view;
 
@@ -51,7 +49,8 @@ namespace TDTS.UI
         private TextMeshProUGUI caption;
         private RectTransform captionRect;
         private Image tableDimmer;
-        private RawImage beam;
+        private RawImage flashlight;
+        private CanvasGroup sunFade;
 
         private Vector2 sunPosition;
         private bool sunPlaced;
@@ -82,6 +81,7 @@ namespace TDTS.UI
             BuildBackdrop(canvas.transform);
             BuildNightPieces(canvas.transform);
             RestylePlayerZones();
+            RestyleTable(canvas.transform);
         }
 
         private void Start()
@@ -126,6 +126,8 @@ namespace TDTS.UI
 
             // The sun, which becomes the Rondo wheel
             sun = NewRect("Sun", root, new Vector2(0.5f, HorizonHeight), new Vector2(0.5f, HorizonHeight), Vector2.zero, Vector2.zero);
+            sunFade = sun.gameObject.AddComponent<CanvasGroup>();
+            sunFade.blocksRaycasts = false;
             sunGlow = Raw("Glow", sun, GlowTexture(), new Color(SunColor.r, SunColor.g, SunColor.b, 0.45f));
             Centre(sunGlow.rectTransform, SunRadius * 6f);
 
@@ -160,7 +162,7 @@ namespace TDTS.UI
             // The table: covers the lower half of a sun sitting on the horizon
             var groundRect = NewRect("Ground", root, Vector2.zero, new Vector2(1f, HorizonHeight), Vector2.zero, Vector2.zero);
             ground = Fill("Surface", groundRect, GroundDay);
-            horizonLine = Fill("Horizon", groundRect, new Color(Accent.r, Accent.g, Accent.b, 0.6f));
+            horizonLine = Fill("Horizon", groundRect, new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.6f));
             var lineRect = horizonLine.rectTransform;
             lineRect.anchorMin = new Vector2(0f, 1f);
             lineRect.anchorMax = Vector2.one;
@@ -208,17 +210,67 @@ namespace TDTS.UI
                 tableDimmer.transform.SetAsLastSibling();
             }
 
-            // A flashlight beam falling on your own cards, behind them
+            // A soft pool of flashlight on your own cards, behind them
             Transform hand = canvas.Find("HandArea");
             if (hand != null)
             {
-                var beamRect = NewRect("Flashlight", hand, Vector2.zero, new Vector2(0f, 1f), new Vector2(20f, 0f), new Vector2(1080f, 140f));
-                beamRect.SetAsFirstSibling();
-                beam = beamRect.gameObject.AddComponent<RawImage>();
-                beam.texture = BeamTexture();
-                beam.color = Color.clear;
-                beam.raycastTarget = false;
+                var poolRect = NewRect("Flashlight", hand, Vector2.zero, new Vector2(0f, 1f), new Vector2(-40f, 0f), new Vector2(1140f, 0f));
+                poolRect.SetAsFirstSibling();
+                flashlight = poolRect.gameObject.AddComponent<RawImage>();
+                flashlight.texture = PoolTexture();
+                flashlight.color = Color.clear;
+                flashlight.raycastTarget = false;
             }
+        }
+
+        /// <summary>The draw pile becomes a stack of card backs; the log and divider match the sky.</summary>
+        private static void RestyleTable(Transform canvas)
+        {
+            Transform cluster = canvas.Find("TableArea/CenterCluster");
+            Transform pile = cluster != null ? cluster.Find("DrawPile") : null;
+            if (pile != null)
+            {
+                Image hitArea = pile.GetComponent<Image>();
+                if (hitArea != null) hitArea.color = Color.clear; // still catches the tap
+                Vector2 size = ((RectTransform)pile).rect.size;
+                for (int i = 2; i >= 0; i--)
+                {
+                    RectTransform back = CardBack(pile, size);
+                    back.anchoredPosition = new Vector2(-4f * i, 4f * i);
+                    back.SetSiblingIndex(2 - i);
+                }
+
+                TextMeshProUGUI count = pile.GetComponentInChildren<TextMeshProUGUI>();
+                if (count != null)
+                {
+                    var band = NewRect("CountBand", pile, Vector2.zero, new Vector2(1f, 0.3f), new Vector2(8f, 8f), new Vector2(-8f, 0f));
+                    Rounded(band.gameObject.AddComponent<Image>(), new Color(0f, 0f, 0f, 0.55f), 10).raycastTarget = false;
+                    band.SetSiblingIndex(3);
+                    RectTransform text = count.rectTransform;
+                    text.anchorMin = Vector2.zero;
+                    text.anchorMax = new Vector2(1f, 0.3f);
+                    text.offsetMin = new Vector2(8f, 8f);
+                    text.offsetMax = new Vector2(-8f, 0f);
+                    count.color = TextColor;
+                    count.enableAutoSizing = true;
+                    count.fontSizeMin = 10f;
+                    count.fontSizeMax = 24f;
+                    count.transform.SetAsLastSibling();
+                }
+            }
+
+            Transform log = cluster != null ? cluster.Find("PlaySpace") : null;
+            Image logImage = log != null ? log.GetComponent<Image>() : null;
+            if (logImage != null)
+            {
+                Rounded(logImage, GlassColor, 16);
+                TextMeshProUGUI text = log.GetComponentInChildren<TextMeshProUGUI>();
+                if (text != null) text.color = TextColor;
+            }
+
+            Transform divider = canvas.Find("HandArea/Divider");
+            Image line = divider != null ? divider.GetComponent<Image>() : null;
+            if (line != null) line.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.35f);
         }
 
         /// <summary>Opponent panels become smoky glass so the sky shows through.</summary>
@@ -231,7 +283,7 @@ namespace TDTS.UI
                 image.sprite = RoundedSprite();
                 image.type = Image.Type.Sliced;
                 image.pixelsPerUnitMultiplier = 32f / 18f;
-                image.color = PanelColor; // read as the normal colour in PlayerZoneController.Start
+                image.color = GlassColor; // read as the normal colour in PlayerZoneController.Start
             }
         }
 
@@ -256,15 +308,12 @@ namespace TDTS.UI
             UpdateCaption();
         }
 
+        // The HUD already shows the day, so the caption only speaks for the Rondo
         private void UpdateCaption()
         {
-            string text = view.CurrentState == GameState.Sundown
-                ? "<b>Sundown</b>"
-                : $"Day <b>{view.CurrentDay}</b> of {view.SundownDay}";
-            if (spinning) text += "  ·  The Rondo turns...";
-            else if (shownResult.HasValue) text += $"  ·  <color=#FAC775>{BoardController.RondoName(shownResult.Value)}</color>";
-            else if (view.EyesClosed && view.CurrentState == GameState.NightPhase) text += "  ·  Night";
-            caption.text = text;
+            caption.text = spinning ? "The Rondo turns..."
+                : shownResult.HasValue ? $"Rondo: <color=#FAC775><b>{BoardController.RondoName(shownResult.Value)}</b></color>"
+                : "";
         }
 
         /// <summary>Where the sun sits on a given day: high and to the left on Day 1, on the horizon at Sundown.</summary>
@@ -360,9 +409,11 @@ namespace TDTS.UI
             stars.alpha = night;
             sunGlow.color = new Color(SunColor.r, SunColor.g, SunColor.b, 0.45f * (1f - night));
             ground.color = Color.Lerp(GroundDay, GroundNight, night);
-            horizonLine.color = new Color(Accent.r, Accent.g, Accent.b, Mathf.Lerp(0.6f, 0.12f, night));
+            horizonLine.color = new Color(AccentColor.r, AccentColor.g, AccentColor.b, Mathf.Lerp(0.6f, 0.12f, night));
             if (tableDimmer != null) tableDimmer.color = new Color(0f, 0f, 0f, 0.5f * night);
-            if (beam != null) beam.color = WithAlpha(BeamColor, 0.2f * night);
+            if (flashlight != null) flashlight.color = WithAlpha(LightColor, 0.16f * night);
+            sunFade.alpha = 1f - night;
+            caption.alpha = 1f - night;
         }
 
         /// <summary>The sky's flash when the wheel lands: each result has its own mood.</summary>

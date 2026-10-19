@@ -20,11 +20,8 @@ namespace TDTS.UI
         [SerializeField] private string mainMenuSceneName = "MainMenu";
         [SerializeField] private string offlineGameSceneName = "Game";
 
-        private static readonly Color PanelColor = new Color32(0x12, 0x15, 0x22, 255);
         private static readonly Color PanelEdge = new Color32(0xFF, 0xFF, 0xFF, 22);
         private static readonly Color FieldColor = new Color32(0x0C, 0x0F, 0x1A, 255);
-        private static readonly Color ButtonColor = new Color32(0x2A, 0x31, 0x45, 255);
-        private static readonly Color AccentColor = new Color32(0xE0, 0x7A, 0x2E, 255);
         private static readonly Color YouColor = new Color32(0x5F, 0xB8, 0x7A, 255);
         private static readonly Color MutedText = new Color32(0xA9, 0xAE, 0xBD, 255);
         private static readonly Color DimText = new Color32(0x5C, 0x62, 0x74, 255);
@@ -514,28 +511,6 @@ namespace TDTS.UI
                 Vector2.zero, Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, 0f));
             label.text = text;
             return button;
-        }
-
-        /// <summary>Hover lightens, press darkens, disabled fades: the graphic itself stays white so the tint is the colour.</summary>
-        private static ColorBlock Tints(Color color)
-        {
-            ColorBlock colors = ColorBlock.defaultColorBlock;
-            colors.normalColor = color;
-            colors.highlightedColor = Color.Lerp(color, Color.white, 0.15f);
-            colors.selectedColor = color;
-            colors.pressedColor = Color.Lerp(color, Color.black, 0.2f);
-            colors.disabledColor = new Color(color.r, color.g, color.b, 0.4f);
-            colors.fadeDuration = 0.08f;
-            return colors;
-        }
-
-        private static Image Rounded(Image image, Color color, float cornerScale = 24)
-        {
-            image.sprite = RoundedSprite();
-            image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 32f / cornerScale;
-            image.color = color;
-            return image;
         }
 
         private static TextMeshProUGUI NewText(string name, Transform parent, float size, FontStyles style,

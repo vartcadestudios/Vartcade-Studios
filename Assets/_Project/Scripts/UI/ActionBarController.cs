@@ -30,6 +30,11 @@ namespace TDTS.UI
 
         private void Start()
         {
+            // Style first, so the copies made below come out matching
+            foreach (Button button in new[] { tradeButton, scavengeButton, playCardButton, stealButton, swapButton })
+                Style(button, SundownArt.ButtonColor);
+            Style(skipButton, SundownArt.AccentColor); // ending your Night turn is the main move
+
             IGameView gm = GameView.Current;
             if (gm == null) return;
 
@@ -46,6 +51,7 @@ namespace TDTS.UI
             passButton = CopyOf(scavengeButton, "Pass", gm.PassForLocalPlayer);
             nightPlayButton = CopyOf(stealButton, "Play card", gm.PlaySelectedForLocalPlayer);
             acceptButton = CopyOf(scavengeButton, "Accept trade", () => gm.AnswerTradeForLocalPlayer(true));
+            Style(acceptButton, SundownArt.AccentColor);
             declineButton = CopyOf(scavengeButton, "Decline", () => gm.AnswerTradeForLocalPlayer(false));
             declineLabel = declineButton.GetComponentInChildren<TextMeshProUGUI>();
 
@@ -97,6 +103,25 @@ namespace TDTS.UI
             copy.onClick.AddListener(onClick);
             SetLabel(copy, text);
             return copy;
+        }
+
+        /// <summary>Rounded, tinted button with light text, greyed out when it isn't available.</summary>
+        private static void Style(Button button, Color color)
+        {
+            Image image = button.targetGraphic as Image ?? button.GetComponent<Image>();
+            if (image == null) return;
+            SundownArt.Rounded(image, Color.white, 14);
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.ColorTint;
+            button.colors = SundownArt.Tints(color);
+
+            TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
+            if (label == null) return;
+            label.color = SundownArt.TextColor;
+            label.fontStyle = FontStyles.Bold;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 14f;
+            label.fontSizeMax = 26f;
         }
 
         private static void FitToRow(Button anyButtonInRow)

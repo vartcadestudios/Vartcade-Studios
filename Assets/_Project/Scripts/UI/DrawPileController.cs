@@ -35,7 +35,7 @@ namespace TDTS.UI
 
         private void Refresh()
         {
-            label.text = $"Draw\nPile\n{GameView.Current.DeckCount}";
+            label.text = $"<b>{GameView.Current.DeckCount}</b> <size=70%>left</size>";
         }
     }
 }
