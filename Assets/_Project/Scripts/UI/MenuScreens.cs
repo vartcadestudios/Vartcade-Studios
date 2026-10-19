@@ -51,7 +51,7 @@ namespace TDTS.UI
                 "Everyone else only hears that <i>someone did something in the dark</i>."),
 
             ("Rondo", "The Rondo",
-                "From <b>Day 6</b>, the sun turns into the Rondo wheel and spins every morning:\n\n" +
+                "From <b>Day 6</b>, the Rondo dial in the middle of the table spins every morning:\n\n" +
                 "<b>Purge</b>  5 cards burn off the draw pile.\n" +
                 "<b>Trading Only</b>  No Scavenge and no action cards today.\n" +
                 "<b>Hunger Disaster</b>  Everyone loses a real Food.\n" +

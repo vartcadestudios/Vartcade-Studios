@@ -7,7 +7,7 @@ namespace TDTS.UI
     /// <summary>
     /// Shows/hides board elements based on live GameManager state:
     /// Day buttons during DayPhase, Night buttons during NightPhase,
-    /// the Rondo wheel from its start day onward, and the "eyes closed"
+    /// the Rondo dial (RondoDial), and the "eyes closed"
     /// overlay while another player takes a hidden turn (spec C1).
     /// </summary>
     public class BoardController : MonoBehaviour
@@ -15,12 +15,8 @@ namespace TDTS.UI
         [Header("Board Elements (assign in Inspector)")]
         [SerializeField] private GameObject nightButtons;  // Steal / Swap / End turn
         [SerializeField] private GameObject dayButtons;    // Trade / Scavenge / Play card
-        [SerializeField] private GameObject rondoWheel;
-        [SerializeField] private TextMeshProUGUI rondoLabel;
+        [SerializeField] private GameObject rondoWheel;    // the slot RondoDial builds into
         [SerializeField] private GameObject blackoutOverlay;
-
-        [Header("Rules")]
-        [SerializeField] private int rondoStartDay = GameManager.RondoStartDay;
 
         [SerializeField] private float overlayDelaySeconds = 1.6f;
 
@@ -28,11 +24,15 @@ namespace TDTS.UI
         private bool wasLocalTurn;
         private float showOverlayAt;
 
-        private TableBackdrop backdrop;
-
         private void Awake()
         {
-            backdrop = gameObject.AddComponent<TableBackdrop>();
+            gameObject.AddComponent<TableBackdrop>();
+            // The dial lives in the old wheel's slot and shows itself, covered until the Rondo wakes
+            if (rondoWheel != null)
+            {
+                rondoWheel.SetActive(true);
+                RondoDial.Attach(rondoWheel);
+            }
         }
 
         private void Start()
@@ -43,7 +43,6 @@ namespace TDTS.UI
 
             GameView.Current.OnStateChanged += HandleStateChanged;
             GameView.Current.OnTurnChanged += Refresh;
-            GameView.Current.OnRondoSpun += HandleRondoSpun;
             Refresh(); // GameManager may already have changed state before we subscribed
         }
 
@@ -52,12 +51,9 @@ namespace TDTS.UI
             if (GameView.Current == null) return;
             GameView.Current.OnStateChanged -= HandleStateChanged;
             GameView.Current.OnTurnChanged -= Refresh;
-            GameView.Current.OnRondoSpun -= HandleRondoSpun;
         }
 
         private void HandleStateChanged(GameState previous, GameState next) => Refresh();
-
-        private void HandleRondoSpun(RondoResult result) => Refresh();
 
         private void Refresh()
         {
@@ -66,13 +62,6 @@ namespace TDTS.UI
 
             dayButtons.SetActive(state == GameState.DayPhase);
             nightButtons.SetActive(state == GameState.NightPhase);
-            // The backdrop's sun is the Rondo wheel now; keep this one as a fallback
-            rondoWheel.SetActive(gm.CurrentDay >= rondoStartDay && (backdrop == null || !backdrop.ShowsRondo));
-
-            if (rondoLabel != null)
-                rondoLabel.text = gm.TodaysRondo.HasValue
-                    ? $"RONDO\n<b>{RondoName(gm.TodaysRondo.Value)}</b>"
-                    : "RONDO";
 
             // Eyes closed: hide the table while someone else takes a Night or Blackout turn.
             // Right after your own turn, wait a moment so you can still see your last peek.

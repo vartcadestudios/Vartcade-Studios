@@ -21,7 +21,8 @@ namespace TDTS.UI
 
         private Image background;
         private Color normalColor;
-        private RectTransform fan;
+        private RectTransform fanArea, fan;
+        private bool sideways;
         private CanvasGroup fanFade;
         private readonly List<RectTransform> fanCards = new List<RectTransform>();
 
@@ -98,11 +99,21 @@ namespace TDTS.UI
 
         // ---------- Their cards, face down ----------
 
-        /// <summary>The label moves up top; their cards fan out face down below it.</summary>
+        /// <summary>
+        /// The label moves to the top of the panel; their cards fan out face down below it, turned
+        /// to face their own seat: card tops point at the middle of the table, like a real hand.
+        /// </summary>
         private void BuildFan()
         {
+            // Which edge of the screen this player sits at decides which way their hand faces
+            var zone = (RectTransform)transform;
+            bool left = zone.anchorMax.x <= 0.01f, right = zone.anchorMin.x >= 0.99f;
+            sideways = left || right;
+            float facing = left ? -90f : right ? 90f : 180f;
+            float split = sideways ? 0.62f : 0.45f;
+
             RectTransform text = label.rectTransform;
-            text.anchorMin = new Vector2(0f, 0.45f);
+            text.anchorMin = new Vector2(0f, split);
             text.anchorMax = Vector2.one;
             text.offsetMin = new Vector2(10f, 0f);
             text.offsetMax = new Vector2(-10f, -8f);
@@ -110,7 +121,9 @@ namespace TDTS.UI
             label.fontSizeMin = 14f;
             label.fontSizeMax = 32f;
 
-            fan = SundownArt.NewRect("Hand", transform, Vector2.zero, new Vector2(1f, 0.45f), new Vector2(12f, 10f), new Vector2(-12f, 0f));
+            fanArea = SundownArt.NewRect("HandArea", transform, Vector2.zero, new Vector2(1f, split), new Vector2(12f, 10f), new Vector2(-12f, 0f));
+            fan = SundownArt.NewRect("Hand", fanArea, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            fan.localEulerAngles = new Vector3(0f, 0f, facing);
             fanFade = fan.gameObject.AddComponent<CanvasGroup>();
             fanFade.blocksRaycasts = false;
         }
@@ -119,12 +132,16 @@ namespace TDTS.UI
         private void LayOutFan(int count, bool dark)
         {
             int shown = dark ? (count > 0 ? CardsShownInTheDark : 0) : Mathf.Min(count, MaxCardsShown);
-            Rect area = fan.rect;
-            float height = Mathf.Clamp(area.height * 0.9f, 30f, 96f);
+
+            // Work in the hand's own frame: turned sideways, its width runs down the panel
+            Rect area = fanArea.rect;
+            Vector2 space = sideways ? new Vector2(area.height, area.width) : area.size;
+            fan.sizeDelta = space;
+            float height = Mathf.Clamp(space.y * 0.9f, 30f, 96f);
             Vector2 size = new Vector2(height * 0.7f, height);
 
             while (fanCards.Count < shown) fanCards.Add(SundownArt.CardBack(fan, size));
-            float step = shown > 1 ? Mathf.Min(size.x * 0.62f, (area.width - size.x) / (shown - 1)) : 0f;
+            float step = shown > 1 ? Mathf.Min(size.x * 0.62f, (space.x - size.x) / (shown - 1)) : 0f;
             if (dark) step = size.x * 0.18f; // a tight, unreadable stack
 
             for (int i = 0; i < fanCards.Count; i++)
@@ -141,4 +158,4 @@ namespace TDTS.UI
             fanFade.alpha = dark ? 0.55f : 1f;
         }
     }
-}
+}
