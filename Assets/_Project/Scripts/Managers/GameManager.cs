@@ -30,7 +30,11 @@ namespace TDTS.Managers
 
         public const int MaxHandSize = 6;
 
+        [Header("Deck")]
+        [SerializeField] private DeckRecipe deckRecipe = new DeckRecipe();
+
         private readonly List<CardData> deck = new List<CardData>();
+        private readonly List<CardData> removedFromGame = new List<CardData>();
         private readonly List<string> playLog = new List<string>();
         private PlayerData selectedTarget;
         private int actionsLeft;
@@ -90,10 +94,10 @@ namespace TDTS.Managers
             foreach (var p in players)
             {
                 if (p.hand.Count > 0) continue;
-                p.hand.Add(new CardData { type = CardType.Supply });
-                p.hand.Add(new CardData { type = CardType.Trash });
-                p.hand.Add(new CardData { type = CardType.NightAction, nightAction = NightActionType.Flashlight });
-                p.hand.Add(new CardData { type = CardType.Supply });
+                p.hand.Add(new CardData { front = FrontType.Supply, frontSupply = SupplyKind.Food, back = BackType.Supply, backSupply = SupplyKind.Food });
+                p.hand.Add(new CardData { front = FrontType.Supply, frontSupply = SupplyKind.Water, back = BackType.Trash });
+                p.hand.Add(new CardData { front = FrontType.Supply, frontSupply = SupplyKind.Medicine, back = BackType.NightAction, nightAction = NightActionType.Flashlight });
+                p.hand.Add(new CardData { front = FrontType.MorningAction, morningAction = MorningActionType.SwapDeck, back = BackType.Supply, backSupply = SupplyKind.Water });
             }
             OnHandsChanged?.Invoke();
         }
@@ -106,33 +110,12 @@ namespace TDTS.Managers
 
         // ---------- Deck ----------
 
-        /// <summary>
-        /// PLACEHOLDER deck. Replace the counts once the Supply/Trash ratio is locked.
-        /// Action counts follow the rulebook: 6 morning variants x 3, 3 night variants x 6.
-        /// </summary>
+        /// <summary>72 cards + 1 random Bunker Key, shuffled (spec S2, S3).</summary>
         private void BuildDeck()
         {
             deck.Clear();
-
-            for (int i = 0; i < 20; i++) deck.Add(new CardData { type = CardType.Supply });
-            for (int i = 0; i < 10; i++) deck.Add(new CardData { type = CardType.Trash });
-            deck.Add(new CardData { type = CardType.BunkerKey });
-
-            foreach (MorningActionType m in Enum.GetValues(typeof(MorningActionType)))
-                for (int i = 0; i < 3; i++)
-                    deck.Add(new CardData { type = CardType.MorningAction, morningAction = m });
-
-            foreach (NightActionType n in Enum.GetValues(typeof(NightActionType)))
-                for (int i = 0; i < 6; i++)
-                    deck.Add(new CardData { type = CardType.NightAction, nightAction = n });
-
-            // Fisher-Yates shuffle
-            for (int i = deck.Count - 1; i > 0; i--)
-            {
-                int j = UnityEngine.Random.Range(0, i + 1);
-                (deck[i], deck[j]) = (deck[j], deck[i]);
-            }
-
+            removedFromGame.Clear();
+            deck.AddRange(DeckBuilder.BuildDrawPile(deckRecipe, new System.Random(), removedFromGame));
             OnDeckChanged?.Invoke();
         }
 
@@ -255,15 +238,18 @@ namespace TDTS.Managers
             if (player == null || handIndex < 0 || handIndex >= player.hand.Count) return false;
 
             CardData card = player.hand[handIndex];
-            if (!card.IsAction) return false;
 
+            // Morning cards are played by their front in the Day,
+            // Night cards by their back at Night, once the owner has peeked.
+            bool isDay = currentState == GameState.DayPhase;
             bool allowed =
-                (card.type == CardType.MorningAction && currentState == GameState.DayPhase) ||
-                (card.type == CardType.NightAction && currentState == GameState.NightPhase);
+                (isDay && card.HasMorningFront) ||
+                (currentState == GameState.NightPhase && card.HasNightBack && card.peeked);
+            string cardName = isDay ? card.FrontName : card.BackName;
 
             if (!allowed)
             {
-                AddLog($"{card.DisplayName} can't be played during {currentState}.");
+                AddLog($"{cardName} can't be played during {currentState}.");
                 return false;
             }
             if (!HasAction()) return false;
@@ -271,7 +257,7 @@ namespace TDTS.Managers
             player.hand.RemoveAt(handIndex);
             SpendAction();
 
-            AddLog($"{player.playerName} played {card.DisplayName}.");
+            AddLog($"{player.playerName} played {cardName}.");
             OnCardPlayed?.Invoke(card);
             OnHandsChanged?.Invoke();
             return true;

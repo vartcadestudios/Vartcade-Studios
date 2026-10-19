@@ -75,8 +75,13 @@ namespace TDTS.UI
             if (me == null || index >= me.hand.Count) return;
 
             CardData card = me.hand[index];
+            GameState state = GameManager.Instance.CurrentState;
 
-            if (card.IsAction)
+            bool playable =
+                (state == GameState.DayPhase && card.HasMorningFront) ||
+                (state == GameState.NightPhase && card.HasNightBack && card.peeked);
+
+            if (playable)
             {
                 GameManager.Instance.PlayCard(me, index);
                 return;
@@ -127,12 +132,15 @@ namespace TDTS.UI
                 CardData card = me.hand[i];
                 bool revealed = i == peekIndex;
 
+                // The owner always sees the front; the back only while peeking.
                 slots[i].background.color =
-                    card.IsAction ? actionColor : (revealed ? revealedColor : hiddenColor);
-                slots[i].label.text = (card.IsAction || revealed) ? card.DisplayName : "?";
+                    revealed ? revealedColor : (card.HasMorningFront ? actionColor : hiddenColor);
+                slots[i].label.text = revealed
+                    ? $"{card.FrontName}\n<size=70%>Back: {card.BackName}</size>"
+                    : card.FrontName;
 
                 Outline outline = slots[i].root.GetComponent<Outline>();
-                if (outline != null) outline.enabled = card.IsAction;
+                if (outline != null) outline.enabled = card.HasMorningFront;
             }
         }
     }
