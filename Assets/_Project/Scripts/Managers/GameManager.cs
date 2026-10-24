@@ -37,8 +37,6 @@ namespace TDTS.Managers
         [Tooltip("Rulebook: 1 action per Day turn, 2 per Night turn. Untick to test freely.")]
         [SerializeField] private bool limitActions = true;
 
-        // The spec has no hand limit, but the hand row only has 6 slots for now.
-        public const int MaxHandSize = 6;
         public const int StartingHandSize = 2;
         public const int MaxPlayers = 6;
         public const int RondoStartDay = 6;
@@ -328,7 +326,7 @@ namespace TDTS.Managers
             OnPlayLogChanged?.Invoke();
         }
 
-        /// <summary>A line only this player sees, like "your hand is full" or a Flashlight result.</summary>
+        /// <summary>A line only this player sees, like "finish your moves first" or a Flashlight result.</summary>
         private void Tell(PlayerData player, string line) => AddLog(new LogEntry { text = line, viewer = player });
 
         /// <summary>
@@ -418,6 +416,40 @@ namespace TDTS.Managers
             if (!limitActions) return;
             actionsLeft = Mathf.Max(0, actionsLeft - 1);
             if (actionsLeft == 0) EndTurn();
+            else EndTurnIfStuck();
+        }
+
+        /// <summary>
+        /// There's no Pass: players use all their actions. This is true while the player still
+        /// has at least one action they could take, so a turn only ends early when nothing is possible.
+        /// </summary>
+        public bool HasAnyMove(PlayerData player)
+        {
+            if (!limitActions) return true;
+            bool othersHaveCards = players.Any(p => p != player && p.hand.Count > 0);
+
+            if (currentState == GameState.DayPhase)
+            {
+                bool cardsAllowed = dayRule != DayRule.TradingOnly;
+                return (cardsAllowed && deck.Count > 0)                              // Scavenge
+                    || (player.hand.Count > 0 && othersHaveCards)                    // Trade
+                    || (cardsAllowed && player.hand.Any(c => c.HasMorningFront));    // Play card
+            }
+            if (currentState == GameState.NightPhase)
+            {
+                return othersHaveCards                                               // Steal, Swap
+                    || player.hand.Any(c => c.HasNightBack);                         // Peek (free), then Play card
+            }
+            return false;
+        }
+
+        /// <summary>The active player can't do anything with the actions they have left, so move on.</summary>
+        private void EndTurnIfStuck()
+        {
+            PlayerData p = ActivePlayer;
+            if (p == null || pendingTrade != null || HasAnyMove(p)) return;
+            AddLog($"{p.playerName} has no moves left.");
+            EndTurn();
         }
 
         // ---------- Day actions ----------
@@ -435,11 +467,6 @@ namespace TDTS.Managers
             if (deck.Count == 0)
             {
                 Tell(player, "The draw pile is empty.");
-                return false;
-            }
-            if (player.hand.Count >= MaxHandSize)
-            {
-                Tell(player, "Your hand is full.");
                 return false;
             }
 
@@ -499,6 +526,7 @@ namespace TDTS.Managers
                 trade.from.hand.Add(trade.card); // still theirs, so they keep what they knew about it
                 AddLog($"{trade.to.playerName} declined the trade.");
                 NotifyHandsChanged();
+                EndTurnIfStuck();
                 return;
             }
 
@@ -514,7 +542,10 @@ namespace TDTS.Managers
 
         // ---------- Night actions ----------
 
-        /// <summary>P6 Peek / P8 Steal-Peek: look at the back of one of your own cards (Night).</summary>
+        /// <summary>
+        /// P6 Peek / P8 Steal-Peek: look at the back of one of your own cards (Night).
+        /// Peeking is free: it costs no action, so you can peek at as many cards as you like.
+        /// </summary>
         public bool PeekCard(PlayerData player, int handIndex)
         {
             if (player == null || handIndex < 0 || handIndex >= player.hand.Count) return false;
@@ -535,7 +566,6 @@ namespace TDTS.Managers
             OnHandsChanged?.Invoke(); // selection stays: no card moved
             OnPeeked?.Invoke(player, handIndex);
             if (player == localPlayer) OnLocalPeek?.Invoke(handIndex);
-            SpendAction();
             return true;
         }
 
@@ -552,11 +582,6 @@ namespace TDTS.Managers
             if (victim.hand.Count == 0)
             {
                 Tell(thief, $"{victim.playerName} has no cards.");
-                return false;
-            }
-            if (thief.hand.Count >= MaxHandSize)
-            {
-                Tell(thief, "Your hand is full.");
                 return false;
             }
             if (victimCardIndex < 0 || victimCardIndex >= victim.hand.Count)
@@ -706,7 +731,6 @@ namespace TDTS.Managers
                     foreach (PlayerData p in PlayersInTurnOrderFrom(player))
                     {
                         if (deck.Count == 0) break;
-                        if (p.hand.Count >= MaxHandSize) continue;
                         GiveCard(p, TakeTopCard());
                         dealt++;
                     }
@@ -760,10 +784,20 @@ namespace TDTS.Managers
 
         // ---------- Ending a turn ----------
 
-        /// <summary>P5 Pass (Day) / P11 End Night turn: ends the turn. At Night you must have peeked (R4).</summary>
+        /// <summary>
+        /// P5 Pass (Day) / P11 End Night turn. There's no Pass button any more: people must use their
+        /// actions, so this only goes through when they have no move left (or actions aren't limited).
+        /// Bots may still call it when none of their picks worked. At Night you must have peeked (R4).
+        /// </summary>
         public bool PassTurn(PlayerData player)
         {
             if (player == null || player != ActivePlayer || pendingTrade != null) return false;
+
+            if (IsHuman(player) && HasAnyMove(player))
+            {
+                Tell(player, "Finish your moves first.");
+                return false;
+            }
 
             if (currentState == GameState.NightPhase && peeksThisTurn == 0 && player.hand.Count > 0 && limitActions)
             {
@@ -873,6 +907,7 @@ namespace TDTS.Managers
             actionsLeft = isDay ? 1 : 2;
             OnTargetChanged?.Invoke();
             OnTurnChanged?.Invoke();
+            EndTurnIfStuck();
         }
 
         /// <summary>Steps 5 and 9 (G16): next player who hasn't gone this phase, or end the phase.</summary>
@@ -1088,7 +1123,7 @@ namespace TDTS.Managers
             }
             else if (next == GameState.NightPhase)
             {
-                AddLog("Night falls. Eyes closed: each player takes 2 actions and must peek at least once.");
+                AddLog("Night falls. Eyes closed: each player takes 2 actions. Peeking is free, and you must peek at least once.");
             }
             else if (next == GameState.Sundown)
             {

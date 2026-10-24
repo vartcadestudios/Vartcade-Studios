@@ -32,18 +32,19 @@ namespace TDTS.UI
                 "You can always see the <b>front</b> of your own cards: Food, Water, Medicine, an action, or a Key.\n\n" +
                 "The <b>back</b> is what really counts, and you can't see it until you <b>peek</b>. " +
                 "A Food front might hide <b>real Supply</b>... or worthless <b>Trash</b>.\n\n" +
-                "Peeked cards get a <color=#FFD54A><b>gold dot</b></color>. Other players only ever see your cards face down. " +
-                "You can hold up to <b>6</b> cards."),
+                "Peeked cards get a <color=#FFD54A><b>gold dot</b></color>. Tap one any time to see its back again. " +
+                "Other players only ever see your cards face down. There's <b>no limit</b> to how many cards you can hold."),
 
             ("Day", "Day: eyes open, one action",
                 "Players take turns in order. On your turn, do <b>one</b> of these:\n\n" +
                 "<b>Trade</b>  Pick one of your cards and tap a player. They choose a card to give back, or turn you down.\n" +
                 "<b>Scavenge</b>  Draw the top card of the pile.\n" +
-                "<b>Play card</b>  Play a <b>Morning Action</b> card, like Swap Deck or Reverse Turn.\n" +
-                "<b>Pass</b>  Do nothing and keep your cards close."),
+                "<b>Play card</b>  Play a <b>Morning Action</b> card, like Swap Deck or Reverse Turn.\n\n" +
+                "There's no passing: your turn ends once you've made your move."),
 
             ("Night", "Night: eyes closed, two actions",
-                "Everyone closes their eyes. You get <b>two</b> actions, and one of them <b>must be a peek</b>.\n\n" +
+                "Everyone closes their eyes. You get <b>two</b> actions, and you <b>must peek</b> at least once. " +
+                "Peeking is free: it doesn't use an action, so peek as much as you like.\n\n" +
                 "<b>Peek</b>  Tap one of your unseen cards to learn its back.\n" +
                 "<b>Steal</b>  Tap a player, then <b>choose</b> one of their face-down cards to take.\n" +
                 "<b>Swap</b>  Give one of your cards for a random card of theirs.\n" +
@@ -63,7 +64,7 @@ namespace TDTS.UI
 
             ("Controls", "Playing on screen",
                 "<b>Tap a player</b> to target them for Trade, Steal, Swap or an action card.\n" +
-                "<b>Tap one of your cards</b> to pick it. At Night, tapping an unseen card peeks at it.\n" +
+                "<b>Tap one of your cards</b> to pick it. At Night, tapping an unseen card peeks at it. Tapping a peeked card shows its back again.\n" +
                 "<b>Tap the draw pile</b> to Scavenge.\n" +
                 "The <b>log</b> in the middle tells you what just happened and how many actions you have left.\n\n" +
                 "Press <b>Esc</b> any time for the menu, these rules and the settings.\n\n" +

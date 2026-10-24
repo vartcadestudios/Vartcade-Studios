@@ -15,18 +15,18 @@ namespace TDTS.UI
     /// </summary>
     public class StealPicker : MonoBehaviour
     {
-        private const float CardWidth = 110f, CardHeight = 154f, Gap = 20f;
+        private const float CardWidth = 110f, CardHeight = 154f, Gap = 20f, MaxRowWidth = 1560f;
 
         private IGameView view;
 
         /// <summary>
         /// Opens the picker for the player you've tapped. Without a usable target it goes straight
-        /// to the rules, which explain what's missing (no target, no cards, hand full).
+        /// to the rules, which explain what's missing (no target, no cards).
         /// </summary>
         public static void Open(Transform canvas, IGameView view)
         {
             PlayerData target = view.SelectedTarget;
-            if (target == null || view.HandCount(target) == 0 || view.LocalPlayer.hand.Count >= GameManager.MaxHandSize)
+            if (target == null || view.HandCount(target) == 0)
             {
                 view.StealForLocalPlayer(-1);
                 return;
@@ -46,7 +46,9 @@ namespace TDTS.UI
             view.OnHandsChanged += Close;
 
             int count = view.HandCount(target);
-            float rowWidth = count * CardWidth + (count - 1) * Gap;
+            // There's no hand limit, so a big hand overlaps its cards to stay on screen
+            float step = count > 1 ? Mathf.Min(CardWidth + Gap, (MaxRowWidth - CardWidth) / (count - 1)) : 0f;
+            float rowWidth = CardWidth + (count - 1) * step;
             float width = Mathf.Max(620f, rowWidth + 120f);
             var panel = NewPanel("Panel", transform, new Vector2(-width / 2f, -230f), new Vector2(width / 2f, 230f));
 
@@ -75,7 +77,7 @@ namespace TDTS.UI
             {
                 int cardIndex = order[i];
                 RectTransform card = CardBack(row, new Vector2(CardWidth, CardHeight));
-                card.anchoredPosition = new Vector2(-rowWidth / 2f + CardWidth / 2f + i * (CardWidth + Gap), 0f);
+                card.anchoredPosition = new Vector2(-rowWidth / 2f + CardWidth / 2f + i * step, 0f);
 
                 Image frame = card.GetComponent<Image>();
                 frame.raycastTarget = true;

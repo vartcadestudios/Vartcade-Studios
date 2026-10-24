@@ -68,7 +68,7 @@ namespace TDTS.UI
         public static string Effect(RondoResult result) => result switch
         {
             RondoResult.Purge => "5 cards burn off the draw pile for good.",
-            RondoResult.TradingOnly => "No Scavenge and no action cards today. Trade or pass.",
+            RondoResult.TradingOnly => "No Scavenge and no action cards today. Trade if you can.",
             RondoResult.HungerDisaster => "Everyone loses a real Food.",
             RondoResult.Tornado => "Every hand is shuffled together and dealt back out.",
             RondoResult.DoomsdayClock => "Sundown comes a day sooner.",

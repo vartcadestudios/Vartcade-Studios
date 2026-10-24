@@ -9,6 +9,7 @@ namespace TDTS.UI
     /// Wires the Day and Night action buttons to GameManager for the local player and
     /// greys them out when it isn't your turn. Adds the buttons the scene doesn't have yet
     /// (Pass, Accept/Decline trade, Night Play card) as copies of existing ones.
+    /// Pass and End turn stay hidden while actions are limited: every turn uses all its actions.
     /// </summary>
     public class ActionBarController : MonoBehaviour
     {
@@ -33,7 +34,7 @@ namespace TDTS.UI
             // Style first, so the copies made below come out matching
             foreach (Button button in new[] { tradeButton, scavengeButton, playCardButton, stealButton, swapButton })
                 Style(button, SundownArt.ButtonColor);
-            Style(skipButton, SundownArt.AccentColor); // ending your Night turn is the main move
+            Style(skipButton, SundownArt.AccentColor);
 
             IGameView gm = GameView.Current;
             if (gm == null) return;
@@ -71,12 +72,16 @@ namespace TDTS.UI
             bool day = myTurn && gm.CurrentState == GameState.DayPhase;
             bool night = myTurn && gm.CurrentState == GameState.NightPhase;
             bool tradingOnly = gm.CurrentDayRule == DayRule.TradingOnly;
+            // No Pass or End turn: you use all your actions. They only show when actions
+            // aren't limited (a testing switch), since then a turn would never end on its own.
+            bool canEndTurn = !gm.LimitActions;
 
             // A trade offered to you replaces the Day buttons until you answer
             tradeButton.gameObject.SetActive(!offeredToMe);
             scavengeButton.gameObject.SetActive(!offeredToMe);
             playCardButton.gameObject.SetActive(!offeredToMe);
-            if (passButton != null) passButton.gameObject.SetActive(!offeredToMe);
+            if (passButton != null) passButton.gameObject.SetActive(!offeredToMe && canEndTurn);
+            skipButton.gameObject.SetActive(canEndTurn);
             if (acceptButton != null) acceptButton.gameObject.SetActive(offeredToMe);
             if (declineButton != null)
             {

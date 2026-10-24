@@ -71,24 +71,28 @@ namespace TDTS.Managers
 
             // Never offer a person a trade with eyes closed: they couldn't see it
             var partners = Others(bot).Where(p => p.hand.Count > 0 && (!gm.EyesClosed || !gm.IsHuman(p))).ToList();
-            if (bot.hand.Count > 0 && partners.Count > 0 && (tradingOnly || roll < 0.15f))
+            bool canTrade = bot.hand.Count > 0 && partners.Count > 0;
+            if (canTrade && (tradingOnly || roll < 0.15f))
                 return gm.OfferTrade(bot, Random.Range(0, bot.hand.Count), Pick(partners));
 
-            if (tradingOnly) return gm.PassTurn(bot);
+            if (!tradingOnly)
+            {
+                int morning = bot.hand.FindIndex(c => c.HasMorningFront);
+                if (morning >= 0 && roll < 0.40f)
+                    return gm.PlayCard(bot, morning, Pick(Others(bot)));
 
-            int morning = bot.hand.FindIndex(c => c.HasMorningFront);
-            if (morning >= 0 && roll < 0.40f)
-                return gm.PlayCard(bot, morning, Pick(Others(bot)));
+                // No Pass any more, so fall back to whatever is still possible
+                if (gm.DeckCount > 0) return gm.DrawCard(bot);
+                if (morning >= 0) return gm.PlayCard(bot, morning, Pick(Others(bot)));
+            }
 
-            if (gm.DeckCount > 0 && bot.hand.Count < GameManager.MaxHandSize && roll < 0.90f)
-                return gm.DrawCard(bot);
-
+            if (canTrade) return gm.OfferTrade(bot, Random.Range(0, bot.hand.Count), Pick(partners));
             return gm.PassTurn(bot);
         }
 
         private bool NightAction(PlayerData bot)
         {
-            // First action: always peek at a card it hasn't looked at yet (R4)
+            // Peeking is free: first look at a card it hasn't seen yet (R4)
             if (gm.PeeksThisTurn == 0 && bot.hand.Count > 0)
             {
                 int unseen = bot.hand.FindIndex(c => !c.peeked);
@@ -102,16 +106,22 @@ namespace TDTS.Managers
             if (nightCard >= 0 && victims.Count > 0 && roll < 0.5f)
                 return gm.PlayCard(bot, nightCard, Pick(victims));
 
-            if (victims.Count > 0 && bot.hand.Count < GameManager.MaxHandSize && roll < 0.65f)
+            // Swap away a card it knows is Trash
+            int trash = bot.hand.FindIndex(c => c.peeked && c.back == BackType.Trash);
+            if (trash >= 0 && victims.Count > 0 && roll >= 0.65f)
+                return gm.SwapWith(bot, trash, Pick(victims));
+
+            // No Pass any more, so fall back to whatever is still possible
+            if (victims.Count > 0)
             {
                 PlayerData victim = Pick(victims);
                 return gm.StealFrom(bot, victim, Random.Range(0, victim.hand.Count));
             }
+            if (nightCard >= 0) return gm.PlayCard(bot, nightCard, Pick(Others(bot)));
 
-            // Swap away a card it knows is Trash
-            int trash = bot.hand.FindIndex(c => c.peeked && c.back == BackType.Trash);
-            if (trash >= 0 && victims.Count > 0 && roll < 0.85f)
-                return gm.SwapWith(bot, trash, Pick(victims));
+            // A Night card it hasn't seen yet: peek at it (free), then play it next time round
+            int unseenNight = bot.hand.FindIndex(c => c.HasNightBack && !c.peeked);
+            if (unseenNight >= 0) return gm.PeekCard(bot, unseenNight);
 
             return gm.PassTurn(bot);
         }
