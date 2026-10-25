@@ -65,8 +65,8 @@ namespace TDTS.UI
                 "<b>Peaceful Day</b>  Nothing happens. Enjoy it."),
 
             ("Controls", "Playing on screen",
-                "<b>Tap a player</b> to target them for Trade, Steal, Swap or an action card.\n" +
-                "<b>Tap their cards</b> for a close-up. Pick one and Trade, Steal or Swap right there.\n" +
+                "<b>Tap a player</b> to see their cards close up and target them for Trade, Steal, Swap or an action card. " +
+                "Pick one of their cards and Trade, Steal or Swap right there.\n" +
                 "<b>Tap one of your cards</b> to pick it. At Night, press <b>Peek</b> to look at its back. At Night, tapping a peeked card shows its back again.\n" +
                 "<b>Tap the draw pile</b> to Scavenge.\n" +
                 "The <b>log</b> in the middle tells you what just happened and how many actions you have left.\n\n" +

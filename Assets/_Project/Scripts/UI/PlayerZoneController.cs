@@ -9,8 +9,8 @@ namespace TDTS.UI
 {
     /// <summary>
     /// An opponent's zone on the board: name, card count and the fronts of their cards, which
-    /// everyone can always see (only backs are secret). Tap the panel to target them, or tap
-    /// their cards for a close-up you can Trade, Steal or Swap from.
+    /// everyone can always see (only backs are secret). Tap anywhere on the panel to target them
+    /// and open a close-up of their cards you can Trade, Steal or Swap from.
     /// </summary>
     public class PlayerZoneController : MonoBehaviour
     {
@@ -61,9 +61,21 @@ namespace TDTS.UI
 
         private PlayerData GetPlayer() => GameView.Current.GetPlayerAfterLocal(seatsAfterYou);
 
+        /// <summary>
+        /// Tapping anywhere on their panel picks them as your target and opens a close-up of their
+        /// cards. With no cards there's nothing to show, so the tap just picks (or un-picks) them.
+        /// </summary>
         private void OnClicked()
         {
-            GameView.Current.SelectTarget(GetPlayer());
+            PlayerData p = GetPlayer();
+            if (p == null) return;
+            if (GameView.Current.HandCount(p) == 0)
+            {
+                GameView.Current.SelectTarget(p);
+                return;
+            }
+            Transform canvas = GetComponentInParent<Canvas>().rootCanvas.transform;
+            CardPicker.OpenCloseUp(canvas, GameView.Current, p);
         }
 
         private void Refresh()
@@ -123,27 +135,7 @@ namespace TDTS.UI
             fanArea = SundownArt.NewRect("HandArea", transform, Vector2.zero, new Vector2(1f, split), new Vector2(12f, 10f), new Vector2(-12f, 0f));
             fan = SundownArt.NewRect("Hand", fanArea, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var group = fan.gameObject.AddComponent<CanvasGroup>();
-            group.blocksRaycasts = false; // taps go to the card area below
-
-            // Tapping their cards opens a close-up of them; the rest of the panel just picks this player
-            var hit = fanArea.gameObject.AddComponent<Image>();
-            hit.color = Color.clear;
-            var button = fanArea.gameObject.AddComponent<Button>();
-            button.transition = Selectable.Transition.None;
-            button.onClick.AddListener(OnCardsClicked);
-        }
-
-        private void OnCardsClicked()
-        {
-            PlayerData p = GetPlayer();
-            if (p == null) return;
-            if (GameView.Current.HandCount(p) == 0)
-            {
-                OnClicked(); // nothing to look at, so just pick them
-                return;
-            }
-            Transform canvas = GetComponentInParent<Canvas>().rootCanvas.transform;
-            CardPicker.OpenCloseUp(canvas, GameView.Current, p);
+            group.blocksRaycasts = false; // taps go to the panel, which opens the close-up
         }
 
         /// <summary>
