@@ -21,6 +21,15 @@ namespace TDTS.Networking
         public NightActionType nightAction;
         public int batteries;
 
+        /// <summary>Just the front: how anyone else's card is sent, since fronts are public.</summary>
+        public static CardSnapshot FrontOf(CardData card) => new CardSnapshot
+        {
+            front = card.front,
+            frontSupply = card.frontSupply,
+            morningAction = card.morningAction,
+            keyDesignIndex = card.keyDesignIndex,
+        };
+
         public static CardSnapshot From(CardData card)
         {
             var snap = new CardSnapshot
@@ -70,7 +79,7 @@ namespace TDTS.Networking
 
     /// <summary>
     /// Everything one seat may know about the table, sent by the host to that seat's device only.
-    /// Other players appear as a name and a card count; their cards never leave the host.
+    /// Other players appear as a name and the fronts of their cards; their backs never leave the host.
     /// Seats are indexes into the turn order.
     /// </summary>
     public struct SeatSnapshot : INetworkSerializable
@@ -97,9 +106,11 @@ namespace TDTS.Networking
         public string[] resultReasons;
 
         public CardSnapshot[] hand;    // your own hand only
+        public CardSnapshot[] fronts;  // every seat's fronts in seat order, handCounts[i] of them each
 
         public int tradeFrom;          // -1 = no trade waiting
         public int tradeTo;
+        public int tradeWanted;        // the card asked for, as an index into tradeTo's hand
         public float tradeSecondsLeft;
 
         public string[] log;           // already filtered for this seat (spec C1)
@@ -127,9 +138,11 @@ namespace TDTS.Networking
             SerializeArray(serializer, ref seated);
             SerializeStrings(serializer, ref resultReasons);
             SerializeCards(serializer, ref hand);
+            SerializeCards(serializer, ref fronts);
 
             serializer.SerializeValue(ref tradeFrom);
             serializer.SerializeValue(ref tradeTo);
+            serializer.SerializeValue(ref tradeWanted);
             serializer.SerializeValue(ref tradeSecondsLeft);
 
             SerializeStrings(serializer, ref log);

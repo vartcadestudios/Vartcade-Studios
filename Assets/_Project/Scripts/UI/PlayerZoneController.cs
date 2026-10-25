@@ -7,7 +7,10 @@ using TDTS.Managers;
 
 namespace TDTS.UI
 {
-    /// <summary>An opponent's zone on the board: shows name and card count, tap to target.</summary>
+    /// <summary>
+    /// An opponent's zone on the board: name, card count and the fronts of their cards, which
+    /// everyone can always see (only backs are secret). Tap to target.
+    /// </summary>
     public class PlayerZoneController : MonoBehaviour
     {
         [Tooltip("Seats after you in turn order: 1 = left, 2 = top, 3 = right.")]
@@ -16,15 +19,14 @@ namespace TDTS.UI
         [SerializeField] private Color selectedColor = new Color32(0xE8, 0x82, 0x3A, 255);
         [SerializeField] private Color activeColor = new Color32(0x3C, 0x7A, 0x4E, 255);
 
-        private const int MaxCardsShown = 10;
-        private const int CardsShownInTheDark = 3;
+        private const float MaxCardHeight = 96f, CardGap = 6f;
+        private const int MaxRows = 4;
 
         private Image background;
         private Color normalColor;
         private RectTransform fanArea, fan;
         private bool sideways;
-        private CanvasGroup fanFade;
-        private readonly List<RectTransform> fanCards = new List<RectTransform>();
+        private string shownHand = "";
 
         private void Start()
         {
@@ -69,7 +71,7 @@ namespace TDTS.UI
             if (p == null)
             {
                 label.text = "";
-                LayOutFan(0, false);
+                LayOutCards(null);
                 return;
             }
 
@@ -80,12 +82,10 @@ namespace TDTS.UI
 
             bool active = GameView.Current.ActivePlayer == p;
             string status = active ? "<b>Taking their turn...</b>" : $"Turn {turn} of {players.Count}";
-            // Eyes closed: you can't see how many cards anyone holds
-            bool dark = GameView.Current.EyesClosed;
             int count = GameView.Current.HandCount(p);
-            string cards = dark ? "? cards" : count == 1 ? "1 card" : $"{count} cards";
+            string cards = count == 1 ? "1 card" : $"{count} cards";
             label.text = $"<b>{p.playerName}</b>\n<size=65%>{cards}  ·  {status}</size>";
-            LayOutFan(count, dark);
+            LayOutCards(p.hand);
 
             // Your pick for Trade / Steal wins over the "their turn" colour
             if (background != null)
@@ -97,19 +97,17 @@ namespace TDTS.UI
         // Highlights stay a little see-through, like the panel itself
         private Color Glass(Color c) => new Color(c.r, c.g, c.b, Mathf.Max(normalColor.a, 0.8f));
 
-        // ---------- Their cards, face down ----------
+        // ---------- Their cards, face up ----------
 
         /// <summary>
-        /// The label moves to the top of the panel; their cards fan out face down below it, turned
-        /// to face their own seat: card tops point at the middle of the table, like a real hand.
+        /// The label moves to the top of the panel; their cards sit face up below it, upright so
+        /// you can read them. The narrow side panels stack them in rows.
         /// </summary>
         private void BuildFan()
         {
-            // Which edge of the screen this player sits at decides which way their hand faces
             var zone = (RectTransform)transform;
             bool left = zone.anchorMax.x <= 0.01f, right = zone.anchorMin.x >= 0.99f;
             sideways = left || right;
-            float facing = left ? -90f : right ? 90f : 180f;
             float split = sideways ? 0.62f : 0.45f;
 
             RectTransform text = label.rectTransform;
@@ -122,40 +120,61 @@ namespace TDTS.UI
             label.fontSizeMax = 32f;
 
             fanArea = SundownArt.NewRect("HandArea", transform, Vector2.zero, new Vector2(1f, split), new Vector2(12f, 10f), new Vector2(-12f, 0f));
-            fan = SundownArt.NewRect("Hand", fanArea, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-            fan.localEulerAngles = new Vector3(0f, 0f, facing);
-            fanFade = fan.gameObject.AddComponent<CanvasGroup>();
-            fanFade.blocksRaycasts = false;
+            fan = SundownArt.NewRect("Hand", fanArea, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            var group = fan.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false; // taps go to the zone, to pick this player
         }
 
-        /// <summary>Lays out their face-down cards. With eyes closed you only see a vague pile.</summary>
-        private void LayOutFan(int count, bool dark)
+        /// <summary>
+        /// Lays out their cards face up. Tries 1 to 4 rows and keeps whichever leaves the most of
+        /// each card showing; when they still don't fit, cards in a row overlap from the left,
+        /// so each card's name (top-left) stays readable.
+        /// </summary>
+        private void LayOutCards(IReadOnlyList<CardData> hand)
         {
-            int shown = dark ? (count > 0 ? CardsShownInTheDark : 0) : Mathf.Min(count, MaxCardsShown);
-
-            // Work in the hand's own frame: turned sideways, its width runs down the panel
+            int count = hand?.Count ?? 0;
             Rect area = fanArea.rect;
-            Vector2 space = sideways ? new Vector2(area.height, area.width) : area.size;
-            fan.sizeDelta = space;
-            float height = Mathf.Clamp(space.y * 0.9f, 30f, 96f);
-            Vector2 size = new Vector2(height * 0.7f, height);
 
-            while (fanCards.Count < shown) fanCards.Add(SundownArt.CardBack(fan, size));
-            float step = shown > 1 ? Mathf.Min(size.x * 0.62f, (space.x - size.x) / (shown - 1)) : 0f;
-            if (dark) step = size.x * 0.18f; // a tight, unreadable stack
+            // Only rebuild when the cards or the room for them changed
+            var key = new System.Text.StringBuilder($"{area.width:0}x{area.height:0}");
+            for (int i = 0; i < count; i++) key.Append('|').Append(hand[i].FrontName);
+            if (key.ToString() == shownHand) return;
+            shownHand = key.ToString();
 
-            for (int i = 0; i < fanCards.Count; i++)
+            for (int i = fan.childCount - 1; i >= 0; i--) Destroy(fan.GetChild(i).gameObject);
+            if (count == 0) return;
+
+            int bestRows = 1;
+            float bestScore = float.MinValue;
+            for (int r = 1; r <= Mathf.Min(MaxRows, count); r++)
             {
-                RectTransform card = fanCards[i];
-                card.gameObject.SetActive(i < shown);
-                if (i >= shown) continue;
-
-                float fromMiddle = i - (shown - 1) / 2f;
-                card.sizeDelta = size;
-                card.anchoredPosition = new Vector2(fromMiddle * step, -Mathf.Abs(fromMiddle) * 2.5f);
-                card.localEulerAngles = new Vector3(0f, 0f, dark ? 0f : -fromMiddle * 4f);
+                Layout(r, count, area, out Vector2 size, out float step, out _);
+                float visible = Mathf.Min(size.x, step > 0f ? step : size.x);
+                float score = visible + size.y * 0.25f;
+                if (score > bestScore) { bestScore = score; bestRows = r; }
             }
-            fanFade.alpha = dark ? 0.55f : 1f;
+
+            Layout(bestRows, count, area, out Vector2 card, out float across, out int perRow);
+            int rows = Mathf.CeilToInt(count / (float)perRow);
+            float totalHeight = rows * card.y + (rows - 1) * CardGap;
+            for (int i = 0; i < count; i++)
+            {
+                int row = i / perRow, col = i % perRow;
+                int inRow = Mathf.Min(perRow, count - row * perRow);
+                float rowWidth = card.x + (inRow - 1) * across;
+                RectTransform front = CardView.Front(fan, card, hand[i]);
+                front.anchoredPosition = new Vector2(-rowWidth / 2f + card.x / 2f + col * across,
+                    totalHeight / 2f - card.y / 2f - row * (card.y + CardGap));
+            }
+        }
+
+        /// <summary>Card size, step between cards and cards per row when using this many rows.</summary>
+        private static void Layout(int rows, int count, Rect area, out Vector2 size, out float step, out int perRow)
+        {
+            perRow = Mathf.CeilToInt(count / (float)rows);
+            float height = Mathf.Min(MaxCardHeight, (area.height - (rows - 1) * CardGap) / rows);
+            size = new Vector2(height * 0.7f, height);
+            step = perRow > 1 ? Mathf.Min(size.x + CardGap, (area.width - size.x) / (perRow - 1)) : 0f;
         }
     }
 }

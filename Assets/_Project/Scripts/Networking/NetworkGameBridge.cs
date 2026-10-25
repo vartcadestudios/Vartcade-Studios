@@ -148,15 +148,15 @@ namespace TDTS.Networking
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-        public void OfferTradeRpc(int handIndex, int targetSeat, RpcParams rpcParams = default)
+        public void OfferTradeRpc(int handIndex, int targetSeat, int wantedIndex, RpcParams rpcParams = default)
         {
-            if (TrySeat(rpcParams, out PlayerData me)) gm.OfferTrade(me, handIndex, SeatAt(targetSeat));
+            if (TrySeat(rpcParams, out PlayerData me)) gm.OfferTrade(me, handIndex, SeatAt(targetSeat), wantedIndex);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-        public void AnswerTradeRpc(bool accept, int handIndex, RpcParams rpcParams = default)
+        public void AnswerTradeRpc(bool accept, RpcParams rpcParams = default)
         {
-            if (TrySeat(rpcParams, out PlayerData me)) gm.AnswerTrade(me, accept, handIndex);
+            if (TrySeat(rpcParams, out PlayerData me)) gm.AnswerTrade(me, accept);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
@@ -212,7 +212,7 @@ namespace TDTS.Networking
             if (view != null) view.Apply(snapshot);
         }
 
-        /// <summary>Only what this seat may know: its own cards, everyone's counts, and its own view of the log.</summary>
+        /// <summary>Only what this seat may know: its own cards, everyone's fronts, and its own view of the log.</summary>
         private SeatSnapshot BuildSnapshot(PlayerData seat)
         {
             IReadOnlyList<PlayerData> players = gm.Players;
@@ -247,9 +247,11 @@ namespace TDTS.Networking
                 resultReasons = players.Select(p => gm.CurrentState == GameState.Sundown ? p.resultReason : "").ToArray(),
 
                 hand = seat.hand.Select(CardSnapshot.From).ToArray(),
+                fronts = players.SelectMany(p => p.hand).Select(CardSnapshot.FrontOf).ToArray(),
 
                 tradeFrom = trade != null ? IndexOf(trade.from) : -1,
                 tradeTo = trade != null ? IndexOf(trade.to) : -1,
+                tradeWanted = gm.TradeWantedIndex,
                 tradeSecondsLeft = gm.TradeSecondsLeft,
 
                 log = gm.LogFor(seat).ToArray(),

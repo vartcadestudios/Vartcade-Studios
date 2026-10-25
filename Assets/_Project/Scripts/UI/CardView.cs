@@ -89,6 +89,39 @@ namespace TDTS.UI
             typeLabel.text = TypeName(card, showingBack);
         }
 
+        /// <summary>
+        /// The front of a card as everyone at the table sees it: its colour, its name in the top-left
+        /// (so it stays readable when cards overlap) and its type along the bottom. Never blocks taps.
+        /// </summary>
+        public static RectTransform Front(Transform parent, Vector2 size, CardData card)
+        {
+            var rect = SundownArt.NewRect("CardFront", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            rect.sizeDelta = size;
+            Color color = ColorFor(card, false);
+            SundownArt.Rounded(rect.gameObject.AddComponent<Image>(), color, 8).raycastTarget = false;
+            var edge = rect.gameObject.AddComponent<Outline>();
+            edge.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            edge.effectDistance = new Vector2(1.5f, -1.5f);
+
+            float pad = Mathf.Max(3f, size.x * 0.07f);
+            var name = MakeLabel(rect, "Name", size.y * 0.16f, FontStyles.Bold, TextAlignmentOptions.TopLeft,
+                Vector2.zero, Vector2.one, new Vector2(pad, size.y * 0.24f), new Vector2(-pad, -pad));
+            name.text = card.FrontName;
+            name.enableAutoSizing = true;
+            name.fontSizeMin = 7f;
+            name.fontSizeMax = size.y * 0.16f;
+
+            var type = MakeLabel(rect, "Type", size.y * 0.08f, FontStyles.Bold, TextAlignmentOptions.BottomLeft,
+                Vector2.zero, new Vector2(1f, 0f), new Vector2(pad, pad * 0.6f), new Vector2(-pad, size.y * 0.24f));
+            type.text = TypeName(card, false);
+            type.enableAutoSizing = true;
+            type.fontSizeMin = 5f;
+            type.fontSizeMax = size.y * 0.08f;
+
+            name.color = type.color = TextColorOn(color);
+            return rect;
+        }
+
         /// <summary>Card colour for one side, shared with the hand row so cards look the same everywhere.</summary>
         public static Color ColorFor(CardData card, bool back)
         {

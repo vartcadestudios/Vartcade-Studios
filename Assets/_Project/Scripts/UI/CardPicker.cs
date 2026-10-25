@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,11 +8,12 @@ using static TDTS.UI.SundownArt;
 namespace TDTS.UI
 {
     /// <summary>
-    /// Steal (P7): you choose which of the target's face-down cards to take. Pops up their cards
-    /// in a shuffled row, so where a card sits in their hand gives nothing away.
-    /// Closes itself if the turn or phase moves on underneath it.
+    /// Pops up the cards of the player you've tapped, face up (fronts are public), so you can pick one:
+    /// - Steal (P7): the card you take.
+    /// - Trade (P1): the card you want in return for the one you picked. They can still refuse.
+    /// Closes itself if the turn, phase or hands move on underneath it.
     /// </summary>
-    public class StealPicker : MonoBehaviour
+    public class CardPicker : MonoBehaviour
     {
         private const float CardWidth = 110f, CardHeight = 154f, Gap = 20f, MaxRowWidth = 1560f;
 
@@ -23,7 +23,7 @@ namespace TDTS.UI
         /// Opens the picker for the player you've tapped. Without a usable target it goes straight
         /// to the rules, which explain what's missing (no target, no cards).
         /// </summary>
-        public static void Open(Transform canvas, IGameView view)
+        public static void OpenSteal(Transform canvas, IGameView view)
         {
             PlayerData target = view.SelectedTarget;
             if (target == null || view.HandCount(target) == 0)
@@ -31,21 +31,44 @@ namespace TDTS.UI
                 view.StealForLocalPlayer(-1);
                 return;
             }
-
-            var overlay = NewRect("StealPicker", canvas, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            overlay.SetAsLastSibling();
-            overlay.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f); // blocks taps behind it
-            overlay.gameObject.AddComponent<StealPicker>().Build(view, target);
+            Open(canvas, view, target, $"Steal from {target.playerName}",
+                "Pick the card you want to take. Peek at it to learn its back.", view.StealForLocalPlayer);
         }
 
-        private void Build(IGameView gameView, PlayerData target)
+        /// <summary>
+        /// Opens the picker for a trade: your picked card for one of theirs. Without a picked card or
+        /// a target with cards it goes straight to the rules, which explain what's missing.
+        /// </summary>
+        public static void OpenTrade(Transform canvas, IGameView view)
+        {
+            PlayerData target = view.SelectedTarget;
+            var hand = view.LocalPlayer?.hand;
+            int mine = view.SelectedCardIndex;
+            if (target == null || view.HandCount(target) == 0 || hand == null || mine < 0 || mine >= hand.Count)
+            {
+                view.TradeSelectedForLocalPlayer(-1);
+                return;
+            }
+            Open(canvas, view, target, $"Trade your {hand[mine].FrontName}",
+                $"Pick the card you want from {target.playerName}. They can accept or refuse.", view.TradeSelectedForLocalPlayer);
+        }
+
+        private static void Open(Transform canvas, IGameView view, PlayerData target, string title, string hint, System.Action<int> onPick)
+        {
+            var overlay = NewRect("CardPicker", canvas, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            overlay.SetAsLastSibling();
+            overlay.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f); // blocks taps behind it
+            overlay.gameObject.AddComponent<CardPicker>().Build(view, target, title, hint, onPick);
+        }
+
+        private void Build(IGameView gameView, PlayerData target, string titleText, string hintText, System.Action<int> onPick)
         {
             view = gameView;
             view.OnTurnChanged += Close;
             view.OnStateChanged += HandleStateChanged;
             view.OnHandsChanged += Close;
 
-            int count = view.HandCount(target);
+            int count = target.hand.Count;
             // There's no hand limit, so a big hand overlaps its cards to stay on screen
             float step = count > 1 ? Mathf.Min(CardWidth + Gap, (MaxRowWidth - CardWidth) / (count - 1)) : 0f;
             float rowWidth = CardWidth + (count - 1) * step;
@@ -54,48 +77,38 @@ namespace TDTS.UI
 
             var title = NewText("Title", panel, 40, FontStyles.Bold, TextAlignmentOptions.Center,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(24f, -92f), new Vector2(-24f, -30f));
-            title.text = $"Steal from {target.playerName}";
+            title.text = titleText;
             title.color = TextColor;
 
             var hint = NewText("Hint", panel, 22, FontStyles.Normal, TextAlignmentOptions.Center,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(24f, -132f), new Vector2(-24f, -92f));
-            hint.text = "Pick a card. You'll see what it is once it's yours.";
+            hint.text = hintText;
             hint.color = new Color(TextColor.r, TextColor.g, TextColor.b, 0.7f);
-
-            // Shuffle the display order so a card's spot in their hand gives nothing away
-            var order = new List<int>();
-            for (int i = 0; i < count; i++) order.Add(i);
-            for (int i = order.Count - 1; i > 0; i--)
-            {
-                int j = Random.Range(0, i + 1);
-                (order[i], order[j]) = (order[j], order[i]);
-            }
 
             var row = NewRect("Cards", panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             row.anchoredPosition = new Vector2(0f, 6f);
             for (int i = 0; i < count; i++)
             {
-                int cardIndex = order[i];
-                RectTransform card = CardBack(row, new Vector2(CardWidth, CardHeight));
+                int cardIndex = i; // capture a copy for the lambda
+                RectTransform card = CardView.Front(row, new Vector2(CardWidth, CardHeight), target.hand[i]);
                 card.anchoredPosition = new Vector2(-rowWidth / 2f + CardWidth / 2f + i * step, 0f);
 
-                Image frame = card.GetComponent<Image>();
-                frame.raycastTarget = true;
+                Image face = card.GetComponent<Image>();
+                face.raycastTarget = true;
                 var button = card.gameObject.AddComponent<Button>();
-                button.targetGraphic = frame;
-                button.colors = Tints(Color.white); // the rust frame brightens on hover
-                button.onClick.AddListener(() => Pick(cardIndex));
+                button.targetGraphic = face;
+                button.colors = Tints(Color.white); // brightens on hover
+                button.onClick.AddListener(() => Pick(cardIndex, onPick));
             }
 
             var cancel = NewRect("Cancel", panel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-120f, 30f), new Vector2(120f, 90f));
             MakeButton(cancel, "Cancel", ButtonColor, Close, 24);
         }
 
-        private void Pick(int victimCardIndex)
+        private void Pick(int cardIndex, System.Action<int> onPick)
         {
-            IGameView v = view;
             Close();
-            v.StealForLocalPlayer(victimCardIndex);
+            onPick(cardIndex);
         }
 
         private void HandleStateChanged(GameState previous, GameState next) => Close();

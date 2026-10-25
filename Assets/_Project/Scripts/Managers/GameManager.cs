@@ -84,12 +84,13 @@ namespace TDTS.Managers
         private float tradeOfferedAt;
         public const float TradeTimeoutSeconds = 30f; // spec R9
 
-        /// <summary>Spec zone Z5: a card offered to another player, waiting for their answer.</summary>
+        /// <summary>Spec zone Z5: a card offered to another player for one of theirs, waiting for their answer.</summary>
         public class TradeOffer
         {
             public PlayerData from;
             public PlayerData to;
-            public CardData card;
+            public CardData card;   // what's on offer
+            public CardData wanted; // the card of theirs the offerer picked
         }
 
         /// <summary>
@@ -212,7 +213,7 @@ namespace TDTS.Managers
             if (pendingTrade != null && Time.time - tradeOfferedAt > TradeTimeoutSeconds)
             {
                 AddLog("No answer in time.");
-                RespondToTrade(false, -1);
+                RespondToTrade(false);
             }
         }
 
@@ -394,7 +395,7 @@ namespace TDTS.Managers
             // R4: the last Night action must be a peek if you haven't peeked yet
             if (phase == GameState.NightPhase && !isPeek && MustPeekNow(player))
             {
-                Tell(player, "You must peek at least once tonight. Tap one of your cards.");
+                Tell(player, "You must peek at least once tonight. Tap one of your cards, then Peek.");
                 return false;
             }
             return true;
@@ -478,8 +479,11 @@ namespace TDTS.Managers
             return true;
         }
 
-        /// <summary>P1 Offer trade: puts 1 card on offer to another player (Day). They answer with RespondToTrade.</summary>
-        public bool OfferTrade(PlayerData from, int handIndex, PlayerData to)
+        /// <summary>
+        /// P1 Offer trade (Day): your card at handIndex for the card of theirs at wantedIndex.
+        /// Fronts are on show, so you choose which of their cards you want. They accept or refuse.
+        /// </summary>
+        public bool OfferTrade(PlayerData from, int handIndex, PlayerData to, int wantedIndex)
         {
             if (!CanAct(from, GameState.DayPhase, "Trade")) return false;
 
@@ -498,30 +502,43 @@ namespace TDTS.Managers
                 Tell(from, $"{to.playerName} has no cards to trade.");
                 return false;
             }
+            if (wantedIndex < 0 || wantedIndex >= to.hand.Count)
+            {
+                Tell(from, $"Pick which of {to.playerName}'s cards you want.");
+                return false;
+            }
 
             CardData card = from.hand[handIndex];
+            CardData wanted = to.hand[wantedIndex];
             from.hand.RemoveAt(handIndex);
-            pendingTrade = new TradeOffer { from = from, to = to, card = card };
+            pendingTrade = new TradeOffer { from = from, to = to, card = card, wanted = wanted };
             tradeOfferedAt = Time.time;
 
-            LogAction(from, $"{from.playerName} offers {to.playerName} a {card.FrontName}.");
+            LogAction(from, $"{from.playerName} offers {to.playerName} {A(card.FrontName)} for their {wanted.FrontName}.");
             NotifyHandsChanged();
             OnTradeOffered?.Invoke();
             return true;
         }
 
+        /// <summary>"a Food", "an Entertainment".</summary>
+        private static string A(string name) => ("AEIOU".IndexOf(char.ToUpperInvariant(name[0])) >= 0 ? "an " : "a ") + name;
+
+        /// <summary>Where the card the offerer asked for sits in the answering player's hand, or -1.</summary>
+        public int TradeWantedIndex => pendingTrade == null ? -1 : pendingTrade.to.hand.IndexOf(pendingTrade.wanted);
+
         /// <summary>
-        /// P2 Accept/decline trade. Accepting gives back the card at handIndex and costs the
-        /// offerer 1 AP; declining returns the offered card and the offerer keeps their AP (spec R9).
+        /// P2 Accept/refuse trade. Accepting swaps the offered card for the one the offerer picked and
+        /// costs the offerer 1 AP; refusing returns the offered card and the offerer keeps their AP (spec R9).
         /// </summary>
-        public void RespondToTrade(bool accept, int handIndex)
+        public void RespondToTrade(bool accept)
         {
             if (pendingTrade == null) return;
 
             TradeOffer trade = pendingTrade;
             pendingTrade = null;
 
-            if (!accept || handIndex < 0 || handIndex >= trade.to.hand.Count)
+            int handIndex = trade.to.hand.IndexOf(trade.wanted);
+            if (!accept || handIndex < 0)
             {
                 trade.from.hand.Add(trade.card); // still theirs, so they keep what they knew about it
                 AddLog($"{trade.to.playerName} declined the trade.");
@@ -548,7 +565,12 @@ namespace TDTS.Managers
         /// </summary>
         public bool PeekCard(PlayerData player, int handIndex)
         {
-            if (player == null || handIndex < 0 || handIndex >= player.hand.Count) return false;
+            if (player == null) return false;
+            if (handIndex < 0 || handIndex >= player.hand.Count)
+            {
+                Tell(player, "Tap one of your cards first, then Peek.");
+                return false;
+            }
             if (!CanAct(player, GameState.NightPhase, "Peek", isPeek: true)) return false;
 
             CardData card = player.hand[handIndex];
@@ -816,13 +838,13 @@ namespace TDTS.Managers
         public void StealForLocalPlayer(int victimCardIndex) { StealFrom(LocalPlayer, selectedTarget, victimCardIndex); }
         public void SwapSelectedForLocalPlayer() { SwapWith(LocalPlayer, selectedCardIndex, selectedTarget); }
         public void PassForLocalPlayer() { PassTurn(LocalPlayer); }
-        public void TradeSelectedForLocalPlayer() { OfferTrade(LocalPlayer, selectedCardIndex, selectedTarget); }
+        public void TradeSelectedForLocalPlayer(int wantedIndex) { OfferTrade(LocalPlayer, selectedCardIndex, selectedTarget, wantedIndex); }
         // Kept so the old Skip button binding still compiles; at Night it now ends your turn.
         public void SkipForLocalPlayer() { PassTurn(LocalPlayer); }
 
         public void PeekForLocalPlayer(int handIndex) { PeekCard(LocalPlayer, handIndex); }
         public void PlaySelectedForLocalPlayer() { PlayChosenCard(LocalPlayer, selectedCardIndex, selectedTarget); }
-        public void AnswerTradeForLocalPlayer(bool accept) { AnswerTrade(LocalPlayer, accept, selectedCardIndex); }
+        public void AnswerTradeForLocalPlayer(bool accept) { AnswerTrade(LocalPlayer, accept); }
 
         /// <summary>Play card button: the card this player picked, on the player they picked.</summary>
         public bool PlayChosenCard(PlayerData player, int handIndex, PlayerData target)
@@ -835,16 +857,11 @@ namespace TDTS.Managers
             return PlayCard(player, handIndex, target);
         }
 
-        /// <summary>A person answers a trade offered to them: accept gives away the card at handIndex.</summary>
-        public void AnswerTrade(PlayerData player, bool accept, int handIndex)
+        /// <summary>A person answers a trade offered to them: accept gives away the card the offerer picked.</summary>
+        public void AnswerTrade(PlayerData player, bool accept)
         {
             if (pendingTrade == null || pendingTrade.to != player) return;
-            if (accept && handIndex < 0)
-            {
-                Tell(player, "Tap the card you'll give in return, then Accept.");
-                return;
-            }
-            RespondToTrade(accept, handIndex);
+            RespondToTrade(accept);
         }
 
         // ---------- Selection ----------

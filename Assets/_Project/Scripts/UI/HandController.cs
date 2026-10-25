@@ -9,9 +9,10 @@ using TDTS.Managers;
 namespace TDTS.UI
 {
     /// <summary>
-    /// Displays the local player's hand. Day: tap a card to pick it for Trade or Play card.
-    /// Night: tap a card you haven't seen to Peek (free, its back shows for a moment).
+    /// Displays the local player's hand. Tap a card to pick it for Trade, Play card, Swap or Peek;
+    /// the Peek button then shows its back for a moment (Night, free).
     /// Tapping a card you've already peeked at picks it and shows its back again, any time.
+    /// When someone offers you a trade, the card they asked for is lifted and edged in gold.
     /// There's no hand limit: slots are added as the hand grows, and cards overlap to fit the row.
     /// </summary>
     public class HandController : MonoBehaviour
@@ -91,20 +92,19 @@ namespace TDTS.UI
             if (me == null || index >= me.hand.Count) return;
 
             CardData card = me.hand[index];
-            GameState state = GameView.Current.CurrentState;
 
-            // Night: tapping a card you haven't seen is a Peek (free, no action used).
-            // Any other tap picks the card for Trade, Swap or Play card.
-            if (state == GameState.NightPhase && !card.peeked)
-            {
-                GameView.Current.PeekForLocalPlayer(index); // OnLocalPeek flashes the back once it goes through
-                return;
-            }
-
+            // A tap only picks the card, for Peek, Trade, Swap or Play card. Peeking is its own button.
             GameView.Current.SelectCard(index);
 
             // You already know this card's back, so you can look at it again as often as you like
             if (card.peeked) Peek(index);
+        }
+
+        /// <summary>The card of yours someone asked for in a trade waiting on your answer, or -1.</summary>
+        private static int AskedForIndex()
+        {
+            IGameView view = GameView.Current;
+            return view.HasPendingTrade && view.TradeTo == view.LocalPlayer ? view.TradeWantedIndex : -1;
         }
 
         /// <summary>Hooks up and styles one card slot.</summary>
@@ -177,7 +177,8 @@ namespace TDTS.UI
                 rect.SetSiblingIndex(i);
             }
 
-            int front = peekIndex >= 0 && peekIndex < count ? peekIndex : GameView.Current.SelectedCardIndex;
+            int front = peekIndex >= 0 && peekIndex < count ? peekIndex
+                : AskedForIndex() >= 0 ? AskedForIndex() : GameView.Current.SelectedCardIndex;
             if (front >= 0 && front < count) cards[front].root.transform.SetAsLastSibling();
         }
 
@@ -283,8 +284,9 @@ namespace TDTS.UI
                 // Spec C6: a peeked card only shows a marker, not its back
                 peekedMarks[i].SetActive(card.peeked && !revealed);
 
-                // The card picked for Trade / Play card lifts a little and gets a gold edge
-                bool picked = i == GameView.Current.SelectedCardIndex;
+                // The card picked for Trade / Play card, or asked for in a trade offered to you,
+                // lifts a little and gets a gold edge
+                bool picked = i == GameView.Current.SelectedCardIndex || i == AskedForIndex();
                 cards[i].root.transform.localScale = picked ? new Vector3(1.08f, 1.08f, 1f) : Vector3.one;
                 Outline outline = cards[i].root.GetComponent<Outline>();
                 if (outline != null)

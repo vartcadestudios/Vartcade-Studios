@@ -73,7 +73,7 @@ namespace TDTS.Managers
             var partners = Others(bot).Where(p => p.hand.Count > 0 && (!gm.EyesClosed || !gm.IsHuman(p))).ToList();
             bool canTrade = bot.hand.Count > 0 && partners.Count > 0;
             if (canTrade && (tradingOnly || roll < 0.15f))
-                return gm.OfferTrade(bot, Random.Range(0, bot.hand.Count), Pick(partners));
+                return OfferRandomTrade(bot, Pick(partners));
 
             if (!tradingOnly)
             {
@@ -86,9 +86,13 @@ namespace TDTS.Managers
                 if (morning >= 0) return gm.PlayCard(bot, morning, Pick(Others(bot)));
             }
 
-            if (canTrade) return gm.OfferTrade(bot, Random.Range(0, bot.hand.Count), Pick(partners));
+            if (canTrade) return OfferRandomTrade(bot, Pick(partners));
             return gm.PassTurn(bot);
         }
+
+        /// <summary>One of its cards for a card of the partner's it picks at random.</summary>
+        private bool OfferRandomTrade(PlayerData bot, PlayerData partner) =>
+            gm.OfferTrade(bot, Random.Range(0, bot.hand.Count), partner, Random.Range(0, partner.hand.Count));
 
         private bool NightAction(PlayerData bot)
         {
@@ -142,8 +146,7 @@ namespace TDTS.Managers
             yield return new WaitForSeconds(GameSettings.BotThinkSeconds(thinkSeconds));
             if (gm.PendingTrade != trade) yield break;
 
-            bool accept = Random.value < acceptTradeChance && trade.to.hand.Count > 0;
-            gm.RespondToTrade(accept, accept ? Random.Range(0, trade.to.hand.Count) : -1);
+            gm.RespondToTrade(Random.value < acceptTradeChance);
         }
     }
 }

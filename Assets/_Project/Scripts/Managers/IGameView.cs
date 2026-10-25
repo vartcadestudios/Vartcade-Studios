@@ -25,7 +25,10 @@ namespace TDTS.Managers
         RondoResult? TodaysRondo { get; }
         bool EyesClosed { get; }
 
-        /// <summary>Everyone in turn order. Only LocalPlayer's hand holds real cards; use HandCount for the rest.</summary>
+        /// <summary>
+        /// Everyone in turn order. Fronts are public, so every hand shows its fronts; only LocalPlayer's
+        /// hand is sure to hold backs too, so read nothing but the front of anyone else's cards.
+        /// </summary>
         IReadOnlyList<PlayerData> Players { get; }
         PlayerData LocalPlayer { get; }
         PlayerData ActivePlayer { get; }
@@ -39,6 +42,8 @@ namespace TDTS.Managers
         bool HasPendingTrade { get; }
         PlayerData TradeTo { get; }
         float TradeSecondsLeft { get; }
+        /// <summary>The card the offerer asked for, as an index into TradeTo's hand, or -1.</summary>
+        int TradeWantedIndex { get; }
 
         PlayerData SelectedTarget { get; }
         int SelectedCardIndex { get; }
@@ -55,9 +60,10 @@ namespace TDTS.Managers
 
         // Buttons and taps for the player at this device
         void DrawForLocalPlayer();
-        void TradeSelectedForLocalPlayer();
+        /// <summary>Offer your picked card for the target's card at this index.</summary>
+        void TradeSelectedForLocalPlayer(int wantedIndex);
         void PlaySelectedForLocalPlayer();
-        /// <summary>Steal the target's face-down card at this index (the thief picks it).</summary>
+        /// <summary>Steal the target's card at this index (the thief picks it).</summary>
         void StealForLocalPlayer(int victimCardIndex);
         void SwapSelectedForLocalPlayer();
         void PassForLocalPlayer();
