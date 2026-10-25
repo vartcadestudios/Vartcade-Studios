@@ -34,6 +34,9 @@ namespace TDTS.UI
         private float spinFrom, spinTo, spinStartedAt;
         private RondoResult? landed;
 
+        /// <summary>The wheel is still spinning. Its banner, named "RondoBanner", follows straight after.</summary>
+        public bool IsAnnouncing => spinning;
+
         private static int Count => Enum.GetValues(typeof(RondoResult)).Length;
         private static float WedgeAngle => 360f / Count;
 
