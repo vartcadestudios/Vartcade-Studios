@@ -9,7 +9,8 @@ namespace TDTS.UI
 {
     /// <summary>
     /// An opponent's zone on the board: name, card count and the fronts of their cards, which
-    /// everyone can always see (only backs are secret). Tap to target.
+    /// everyone can always see (only backs are secret). Tap the panel to target them, or tap
+    /// their cards for a close-up you can Trade, Steal or Swap from.
     /// </summary>
     public class PlayerZoneController : MonoBehaviour
     {
@@ -122,7 +123,27 @@ namespace TDTS.UI
             fanArea = SundownArt.NewRect("HandArea", transform, Vector2.zero, new Vector2(1f, split), new Vector2(12f, 10f), new Vector2(-12f, 0f));
             fan = SundownArt.NewRect("Hand", fanArea, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             var group = fan.gameObject.AddComponent<CanvasGroup>();
-            group.blocksRaycasts = false; // taps go to the zone, to pick this player
+            group.blocksRaycasts = false; // taps go to the card area below
+
+            // Tapping their cards opens a close-up of them; the rest of the panel just picks this player
+            var hit = fanArea.gameObject.AddComponent<Image>();
+            hit.color = Color.clear;
+            var button = fanArea.gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            button.onClick.AddListener(OnCardsClicked);
+        }
+
+        private void OnCardsClicked()
+        {
+            PlayerData p = GetPlayer();
+            if (p == null) return;
+            if (GameView.Current.HandCount(p) == 0)
+            {
+                OnClicked(); // nothing to look at, so just pick them
+                return;
+            }
+            Transform canvas = GetComponentInParent<Canvas>().rootCanvas.transform;
+            CardPicker.OpenCloseUp(canvas, GameView.Current, p);
         }
 
         /// <summary>

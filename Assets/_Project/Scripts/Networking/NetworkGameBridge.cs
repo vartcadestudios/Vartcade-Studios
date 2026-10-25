@@ -234,6 +234,7 @@ namespace TDTS.Networking
                 limitActions = gm.LimitActions,
                 actionsLeft = gm.ActionsLeft,
                 peeksThisTurn = gm.ActivePlayer == seat ? gm.PeeksThisTurn : 0,
+                stoleOrSwapped = gm.ActivePlayer == seat && gm.StoleOrSwappedThisTurn,
                 activeSeat = IndexOf(gm.ActivePlayer),
                 turnNumber = gm.TurnNumber,
                 dayRule = gm.CurrentDayRule,

@@ -96,15 +96,14 @@ namespace TDTS.Managers
 
         private bool NightAction(PlayerData bot)
         {
-            // Peeking is free: first look at a card it hasn't seen yet (R4)
+            // First action: look at a card it hasn't seen yet (R4). Each peek uses an action.
+            int unseen = bot.hand.FindIndex(c => !c.peeked);
             if (gm.PeeksThisTurn == 0 && bot.hand.Count > 0)
-            {
-                int unseen = bot.hand.FindIndex(c => !c.peeked);
                 return gm.PeekCard(bot, unseen >= 0 ? unseen : Random.Range(0, bot.hand.Count));
-            }
 
             float roll = Random.value;
             var victims = Others(bot).Where(p => p.hand.Count > 0).ToList();
+            bool canTake = victims.Count > 0 && !gm.StoleOrSwappedThisTurn; // one Steal or Swap a night
 
             int nightCard = bot.hand.FindIndex(c => c.HasNightBack && c.peeked);
             if (nightCard >= 0 && victims.Count > 0 && roll < 0.5f)
@@ -112,20 +111,17 @@ namespace TDTS.Managers
 
             // Swap away a card it knows is Trash
             int trash = bot.hand.FindIndex(c => c.peeked && c.back == BackType.Trash);
-            if (trash >= 0 && victims.Count > 0 && roll >= 0.65f)
+            if (trash >= 0 && canTake && roll >= 0.65f)
                 return gm.SwapWith(bot, trash, Pick(victims));
 
             // No Pass any more, so fall back to whatever is still possible
-            if (victims.Count > 0)
+            if (canTake)
             {
                 PlayerData victim = Pick(victims);
                 return gm.StealFrom(bot, victim, Random.Range(0, victim.hand.Count));
             }
             if (nightCard >= 0) return gm.PlayCard(bot, nightCard, Pick(Others(bot)));
-
-            // A Night card it hasn't seen yet: peek at it (free), then play it next time round
-            int unseenNight = bot.hand.FindIndex(c => c.HasNightBack && !c.peeked);
-            if (unseenNight >= 0) return gm.PeekCard(bot, unseenNight);
+            if (bot.hand.Count > 0) return gm.PeekCard(bot, unseen >= 0 ? unseen : Random.Range(0, bot.hand.Count));
 
             return gm.PassTurn(bot);
         }

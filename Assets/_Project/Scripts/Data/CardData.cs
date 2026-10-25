@@ -39,7 +39,7 @@ namespace TDTS.Data
         public SupplyKind backSupply;           // back == Supply only
         public NightActionType nightAction;     // back == NightAction only
 
-        public int keyDesignIndex;              // BunkerKey only: which of the 4 front designs (0-3)
+        public int keyDesignIndex;              // BunkerKey back only: which of the 4 Keys (0-3); its front is that Supply
         public int batteries = FlashlightBatteries; // Flashlight only (spec V9)
         public bool peeked;                     // Spec V8: the owner has seen the back
 

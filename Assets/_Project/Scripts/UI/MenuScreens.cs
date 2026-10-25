@@ -24,15 +24,16 @@ namespace TDTS.UI
         {
             ("Goal", "Make it to the bunker",
                 "The sun sets in <b>ten days</b>. When it does, the bunker has only <b>two seats</b>.\n\n" +
-                "Whoever holds the <color=#FAC775><b>Bunker Key</b></color> gets a seat, no matter what.\n\n" +
+                "Whoever holds the <color=#FAC775><b>Bunker Key</b></color> gets a seat, no matter what. " +
+                "It hides on the <b>back</b> of an ordinary Supply card, so you may not know who has it... even if it's you.\n\n" +
                 "The other seats go to players holding at least <b>3 real Supply</b> cards, most Supply first. " +
                 "Everyone else is left outside when the light goes."),
 
             ("Your cards", "Every card has two faces",
-                "You can always see the <b>front</b> of your own cards: Food, Water, Medicine, an action, or a Key.\n\n" +
+                "You can always see the <b>front</b> of your own cards: Food, Water, Medicine, Entertainment, or an action.\n\n" +
                 "The <b>back</b> is what really counts, and you can't see it until you <b>peek</b>. " +
-                "A Food front might hide <b>real Supply</b>... or worthless <b>Trash</b>.\n\n" +
-                "Peeked cards get a <color=#FFD54A><b>gold dot</b></color>. Tap one any time to see its back again. " +
+                "A Food front might hide <b>real Supply</b>, worthless <b>Trash</b>... or the <b>Bunker Key</b>.\n\n" +
+                "Peeked cards get a <color=#FFD54A><b>gold dot</b></color>. At Night, tap one to see its back again; by day it stays hidden. " +
                 "Everyone can always see the <b>fronts</b> of everyone's cards; only backs are secret. " +
                 "There's <b>no limit</b> to how many cards you can hold."),
 
@@ -44,8 +45,8 @@ namespace TDTS.UI
                 "There's no passing: your turn ends once you've made your move."),
 
             ("Night", "Night: eyes closed, two actions",
-                "Everyone closes their eyes. You get <b>two</b> actions, and you <b>must peek</b> at least once. " +
-                "Peeking is free: it doesn't use an action, so peek as much as you like.\n\n" +
+                "Everyone closes their eyes. You get <b>two</b> actions. You <b>must peek</b> at least once, " +
+                "and you can <b>Steal or Swap only once</b>. Each peek uses an action, so two peeks end your turn.\n\n" +
                 "<b>Peek</b>  Tap one of your cards, then press Peek to learn its back.\n" +
                 "<b>Steal</b>  Tap a player, then <b>choose</b> which of their cards to take.\n" +
                 "<b>Swap</b>  Give one of your cards for a random card of theirs.\n" +
@@ -65,7 +66,8 @@ namespace TDTS.UI
 
             ("Controls", "Playing on screen",
                 "<b>Tap a player</b> to target them for Trade, Steal, Swap or an action card.\n" +
-                "<b>Tap one of your cards</b> to pick it. At Night, press <b>Peek</b> to look at its back. Tapping a peeked card shows its back again.\n" +
+                "<b>Tap their cards</b> for a close-up. Pick one and Trade, Steal or Swap right there.\n" +
+                "<b>Tap one of your cards</b> to pick it. At Night, press <b>Peek</b> to look at its back. At Night, tapping a peeked card shows its back again.\n" +
                 "<b>Tap the draw pile</b> to Scavenge.\n" +
                 "The <b>log</b> in the middle tells you what just happened and how many actions you have left.\n\n" +
                 "Press <b>Esc</b> any time for the menu, these rules and the settings.\n\n" +

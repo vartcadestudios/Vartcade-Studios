@@ -10,8 +10,8 @@ namespace TDTS.UI
 {
     /// <summary>
     /// Displays the local player's hand. Tap a card to pick it for Trade, Play card, Swap or Peek;
-    /// the Peek button then shows its back for a moment (Night, free).
-    /// Tapping a card you've already peeked at picks it and shows its back again, any time.
+    /// the Peek button then shows its back for a moment (Night, 1 action).
+    /// At Night, tapping a card you've already peeked at picks it and shows its back again.
     /// When someone offers you a trade, the card they asked for is lifted and edged in gold.
     /// There's no hand limit: slots are added as the hand grows, and cards overlap to fit the row.
     /// </summary>
@@ -96,8 +96,9 @@ namespace TDTS.UI
             // A tap only picks the card, for Peek, Trade, Swap or Play card. Peeking is its own button.
             GameView.Current.SelectCard(index);
 
-            // You already know this card's back, so you can look at it again as often as you like
-            if (card.peeked) Peek(index);
+            // You already know this card's back, so at Night you can look at it again for free.
+            // By day it stays hidden: learning a back takes a Night action.
+            if (card.peeked && GameView.Current.CurrentState == GameState.NightPhase) Peek(index);
         }
 
         /// <summary>The card of yours someone asked for in a trade waiting on your answer, or -1.</summary>

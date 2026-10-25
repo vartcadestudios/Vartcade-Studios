@@ -54,7 +54,7 @@ namespace TDTS.UI
 
             passButton = CopyOf(scavengeButton, "Pass", gm.PassForLocalPlayer);
             nightPlayButton = CopyOf(stealButton, "Play card", gm.PlaySelectedForLocalPlayer);
-            // Tapping a card at Night only picks it; this looks at the back of the picked card (free)
+            // Tapping a card at Night only picks it; this looks at the back of the picked card (1 action)
             peekButton = CopyOf(stealButton, "Peek", () => gm.PeekForLocalPlayer(gm.SelectedCardIndex));
             Style(peekButton, SundownArt.AccentColor);
             peekButton.transform.SetSiblingIndex(stealButton.transform.GetSiblingIndex()); // first in the row
@@ -100,14 +100,15 @@ namespace TDTS.UI
             playCardButton.interactable = day && !tradingOnly && !PickedCardIsUnplayable(gm, true);
             if (passButton != null) passButton.interactable = day;
 
-            stealButton.interactable = night;
-            swapButton.interactable = night;
+            // One Steal or Swap a night
+            stealButton.interactable = night && !gm.StoleOrSwappedThisTurn;
+            swapButton.interactable = night && !gm.StoleOrSwappedThisTurn;
             skipButton.interactable = night && gm.PeeksThisTurn > 0;
             if (nightPlayButton != null) nightPlayButton.interactable = night && !PickedCardIsUnplayable(gm, false);
             if (peekButton != null) peekButton.interactable = night && !PickedCardIsPeeked(gm);
         }
 
-        /// <summary>You already know the back of the card you picked (tap it to see it again).</summary>
+        /// <summary>You already know the back of the card you picked (tap it at Night to see it again).</summary>
         private static bool PickedCardIsPeeked(IGameView gm)
         {
             var hand = gm.LocalPlayer?.hand;

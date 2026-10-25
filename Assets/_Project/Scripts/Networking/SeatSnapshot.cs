@@ -94,6 +94,7 @@ namespace TDTS.Networking
         public bool limitActions;
         public int actionsLeft;
         public int peeksThisTurn;
+        public bool stoleOrSwapped;
         public int activeSeat;   // -1 between phases
         public int turnNumber;
         public DayRule dayRule;
@@ -127,6 +128,7 @@ namespace TDTS.Networking
             serializer.SerializeValue(ref limitActions);
             serializer.SerializeValue(ref actionsLeft);
             serializer.SerializeValue(ref peeksThisTurn);
+            serializer.SerializeValue(ref stoleOrSwapped);
             serializer.SerializeValue(ref activeSeat);
             serializer.SerializeValue(ref turnNumber);
             serializer.SerializeValue(ref dayRule);

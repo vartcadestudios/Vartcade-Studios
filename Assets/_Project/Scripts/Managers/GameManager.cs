@@ -79,6 +79,7 @@ namespace TDTS.Managers
         private int turnNumber;
         private readonly HashSet<PlayerData> hadTurn = new HashSet<PlayerData>();
         private CardData stolenThisTurn;
+        private bool stoleOrSwapped; // one Steal or Swap a night
 
         private TradeOffer pendingTrade;
         private float tradeOfferedAt;
@@ -115,6 +116,7 @@ namespace TDTS.Managers
         public bool LimitActions => limitActions;
         public int ActionsLeft => actionsLeft;
         public int PeeksThisTurn => peeksThisTurn;
+        public bool StoleOrSwappedThisTurn => stoleOrSwapped;
         public PlayerData SelectedTarget => selectedTarget;
         public int SelectedCardIndex => selectedCardIndex;
         public IReadOnlyList<string> PlayLog => LogFor(localPlayer);
@@ -438,8 +440,8 @@ namespace TDTS.Managers
             }
             if (currentState == GameState.NightPhase)
             {
-                return othersHaveCards                                               // Steal, Swap
-                    || player.hand.Any(c => c.HasNightBack);                         // Peek (free), then Play card
+                return (othersHaveCards && !stoleOrSwapped)                          // Steal, Swap (one a night)
+                    || player.hand.Count > 0;                                        // Peek (or Play card)
             }
             return false;
         }
@@ -561,7 +563,7 @@ namespace TDTS.Managers
 
         /// <summary>
         /// P6 Peek / P8 Steal-Peek: look at the back of one of your own cards (Night).
-        /// Peeking is free: it costs no action, so you can peek at as many cards as you like.
+        /// Each peek uses 1 action, so peeking at two cards ends your Night turn.
         /// </summary>
         public bool PeekCard(PlayerData player, int handIndex)
         {
@@ -588,13 +590,22 @@ namespace TDTS.Managers
             OnHandsChanged?.Invoke(); // selection stays: no card moved
             OnPeeked?.Invoke(player, handIndex);
             if (player == localPlayer) OnLocalPeek?.Invoke(handIndex);
+            SpendAction();
             return true;
+        }
+
+        /// <summary>Only one Steal or Swap a night; the other action is for peeking (or playing a card).</summary>
+        private bool CanStealOrSwap(PlayerData player)
+        {
+            if (!stoleOrSwapped) return true;
+            Tell(player, "You can only Steal or Swap once a night. Peek at a card instead.");
+            return false;
         }
 
         /// <summary>P7 Steal: the thief picks one of the target's face-down cards and takes it (Night).</summary>
         public bool StealFrom(PlayerData thief, PlayerData victim, int victimCardIndex)
         {
-            if (!CanAct(thief, GameState.NightPhase, "Steal")) return false;
+            if (!CanAct(thief, GameState.NightPhase, "Steal") || !CanStealOrSwap(thief)) return false;
 
             if (victim == null || victim == thief)
             {
@@ -616,6 +627,7 @@ namespace TDTS.Managers
             victim.hand.RemoveAt(victimCardIndex);
             GiveCard(thief, stolen);
             stolenThisTurn = stolen;
+            stoleOrSwapped = true;
 
             LogAction(thief, $"{thief.playerName} stole a {stolen.FrontName} from {victim.playerName}.");
             NotifyHandsChanged();
@@ -626,7 +638,7 @@ namespace TDTS.Managers
         /// <summary>P9 Swap: your chosen card for a random face-down card from the target (Night).</summary>
         public bool SwapWith(PlayerData player, int handIndex, PlayerData target)
         {
-            if (!CanAct(player, GameState.NightPhase, "Swap")) return false;
+            if (!CanAct(player, GameState.NightPhase, "Swap") || !CanStealOrSwap(player)) return false;
 
             if (target == null || target == player)
             {
@@ -649,6 +661,7 @@ namespace TDTS.Managers
             CardData theirs = TakeRandomCard(target);
             GiveCard(player, theirs);
             GiveCard(target, mine);
+            stoleOrSwapped = true;
 
             LogAction(player, $"{player.playerName} swapped a {mine.FrontName} for {target.playerName}'s {theirs.FrontName}.");
             NotifyHandsChanged();
@@ -900,6 +913,7 @@ namespace TDTS.Managers
             selectedTarget = null;
             selectedCardIndex = -1;
             stolenThisTurn = null;
+            stoleOrSwapped = false;
             peeksThisTurn = 0;
 
             bool isDay = currentState == GameState.DayPhase;
@@ -1140,7 +1154,7 @@ namespace TDTS.Managers
             }
             else if (next == GameState.NightPhase)
             {
-                AddLog("Night falls. Eyes closed: each player takes 2 actions. Peeking is free, and you must peek at least once.");
+                AddLog("Night falls. Eyes closed: each player takes 2 actions, peeks at least once, and may Steal or Swap once.");
             }
             else if (next == GameState.Sundown)
             {

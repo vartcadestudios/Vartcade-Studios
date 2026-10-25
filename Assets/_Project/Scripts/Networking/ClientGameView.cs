@@ -74,6 +74,7 @@ namespace TDTS.Networking
         public bool LimitActions => !hasSnapshot || snap.limitActions;
         public int ActionsLeft => snap.actionsLeft;
         public int PeeksThisTurn => snap.peeksThisTurn;
+        public bool StoleOrSwappedThisTurn => snap.stoleOrSwapped;
         public int TurnNumber => snap.turnNumber;
         public DayRule CurrentDayRule => snap.dayRule;
         public RondoResult? TodaysRondo => hasSnapshot && snap.rondo >= 0 ? (RondoResult)snap.rondo : (RondoResult?)null;

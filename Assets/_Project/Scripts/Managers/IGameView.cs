@@ -20,6 +20,8 @@ namespace TDTS.Managers
         bool LimitActions { get; }
         int ActionsLeft { get; }
         int PeeksThisTurn { get; }
+        /// <summary>The active player already used this night's one Steal or Swap.</summary>
+        bool StoleOrSwappedThisTurn { get; }
         int TurnNumber { get; }
         DayRule CurrentDayRule { get; }
         RondoResult? TodaysRondo { get; }
