@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -48,7 +49,40 @@ namespace TDTS.UI
 
         private void HandleStateChanged(GameState previous, GameState next)
         {
-            if (next == GameState.Sundown) StartCoroutine(Show());
+            if (next != GameState.Sundown || recorded) return;
+            RecordResult();
+            StartCoroutine(Show());
+        }
+
+        // ---------- Your profile ----------
+
+        private bool recorded;
+        private bool newBestStreak;
+
+        /// <summary>
+        /// Adds this game to your profile straight away, before the screen appears, so leaving early
+        /// still counts it. Uses the host's verdict and reason, since a client never sees unpeeked backs.
+        /// </summary>
+        private void RecordResult()
+        {
+            PlayerData me = GameView.Current?.LocalPlayer;
+            if (me == null) return;
+            recorded = true;
+
+            bool heldKey = me.resultReason.Contains("Bunker Key");
+            Match supply = Regex.Match(me.resultReason, @"\d+");
+            newBestStreak = PlayerProfile.Current.Record(me.isSeated, heldKey,
+                supply.Success ? int.Parse(supply.Value) : 0, NetworkGameBridge.IsOnline);
+        }
+
+        /// <summary>A line under your verdict about your streak, when there's one worth mentioning.</summary>
+        private string StreakLine()
+        {
+            PlayerProfile profile = PlayerProfile.Current;
+            if (!recorded) return "";
+            if (newBestStreak && profile.longestStreak > 1) return $"<color=#E07A2E><b>{profile.longestStreak} wins in a row. New best streak!</b></color>";
+            if (profile.currentStreak > 1) return $"<color=#E07A2E><b>{profile.currentStreak} wins in a row</b></color>";
+            return "";
         }
 
         public void OnBackToMenuPressed()
@@ -101,7 +135,8 @@ namespace TDTS.UI
 
             var why = NewText("Why", panel, 26, FontStyles.Normal, TextAlignmentOptions.Center,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(40f, -236f), new Vector2(-40f, -190f));
-            why.text = me != null ? Reason(me) : "";
+            string streak = StreakLine();
+            why.text = (me != null ? Reason(me) : "") + (streak.Length > 0 ? $"   ·   {streak}" : "");
             why.color = new Color(TextColor.r, TextColor.g, TextColor.b, 0.7f);
 
             // Everyone, survivors first
