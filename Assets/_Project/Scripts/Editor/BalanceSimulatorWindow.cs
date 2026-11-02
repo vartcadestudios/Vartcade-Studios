@@ -23,9 +23,10 @@ namespace TDTS.EditorTools
         private int seedBase;
         private Stopwatch watch;
         private Vector2 scroll;
+        private int tab = 1;
 
         [MenuItem("TDTS/Balance Simulator")]
-        private static void Open() => GetWindow<BalanceSimulatorWindow>("Balance Simulator").minSize = new Vector2(420, 520);
+        private static void Open() => GetWindow<BalanceSimulatorWindow>("Balance Simulator").minSize = new Vector2(760, 560);
 
         private void OnDisable() => Stop();
 
@@ -114,46 +115,83 @@ namespace TDTS.EditorTools
             if (running && GUILayout.Button("Stop")) Stop();
         }
 
+        private static readonly string[] Tabs = { "Overview", "Strategies", "Supply", "Moves", "Cards", "Rondo" };
+
         private void DrawResults()
         {
             if (stats == null || stats.games == 0) return;
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Results", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Survivors per game", $"{stats.AvgSurvivors:0.00} of {runSettings.seats.Length} (the bunker holds 2)");
-            EditorGUILayout.LabelField("Games where nobody survived", Percent(stats.gamesNobodySurvived, stats.games));
-            EditorGUILayout.LabelField("Someone held the Key at Sundown", Percent(stats.keyHolderAtSundown, stats.games));
-            EditorGUILayout.LabelField("Trades accepted", Percent(stats.tradesAccepted, stats.tradesOffered));
-
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Survival by strategy", EditorStyles.boldLabel);
-            Row(true, "Strategy", "Survived", "via Key", "via Supply", "Avg real Supply");
-            foreach (SimStats.StrategyRow row in stats.StrategiesBestFirst)
-            {
-                Row(false, BotProfile.For(row.strategy).Label,
-                    Percent(row.survived, row.seats),
-                    row.survivedByKey.ToString(),
-                    row.survivedBySupply.ToString(),
-                    row.AvgRealSupply.ToString("0.0"));
-            }
-
-            if (stats.stalledTurns > 0)
-                EditorGUILayout.HelpBox($"{stats.stalledTurns} turns ended early because no move went through.", MessageType.Info);
-        }
-
-        private static void Row(bool header, params string[] cells)
-        {
-            GUIStyle style = header ? EditorStyles.boldLabel : EditorStyles.label;
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField(cells[0], style, GUILayout.Width(110));
-                for (int i = 1; i < cells.Length; i++)
-                    EditorGUILayout.LabelField(cells[i], style, GUILayout.MinWidth(60));
+                EditorGUILayout.LabelField("Results", EditorStyles.boldLabel);
+                using (new EditorGUI.DisabledScope(running))
+                    if (GUILayout.Button("Export CSV...", GUILayout.Width(110))) ExportCsv();
+            }
+
+            tab = GUILayout.Toolbar(tab, Tabs);
+            EditorGUILayout.Space(4);
+
+            switch (tab)
+            {
+                case 0:
+                    Explain("The whole run at a glance. The bunker has 2 seats, so with 4 players the fair share is 50% each.");
+                    DrawTable(stats.OverviewHeader, stats.OverviewRows(runSettings), 250);
+                    break;
+                case 1:
+                    Explain("How often each strategy got a bunker seat, how, and why it lost when it didn't. " +
+                            "'vs fair share' is how far above or below an equal split it did.");
+                    DrawTable(SimStats.StrategyHeader, stats.StrategyRows(), 90);
+                    break;
+                case 2:
+                    Explain("How many real Supply cards each strategy held at Sundown (share of its games). " +
+                            "Without the Key you need 3 or more to qualify for a seat.");
+                    DrawTable(SimStats.SupplyHeader, stats.SupplyRows(), 90);
+                    break;
+                case 3:
+                    Explain("Average moves per game for one seat playing that strategy.");
+                    DrawTable(SimStats.MovesHeader, stats.MoveRows(), 90);
+                    break;
+                case 4:
+                    Explain("Every action card played. 'Win rate when played' is how often the player who played it survived that game.");
+                    DrawTable(SimStats.CardHeader, stats.CardRows(), 140);
+                    break;
+                case 5:
+                    Explain("Rondo results from Day 6, most deadly first. Compare 'survivors per game' with the Overview average.");
+                    DrawTable(SimStats.RondoHeader, stats.RondoRows(), 140);
+                    break;
             }
         }
 
-        private static string Percent(int part, int whole) =>
-            whole == 0 ? "-" : $"{100f * part / whole:0.0}%  ({part}/{whole})";
+        private static void Explain(string text) => EditorGUILayout.HelpBox(text, MessageType.None);
+
+        /// <summary>A simple grid: bold header, alternating row shading, first column wider.</summary>
+        private static void DrawTable(string[] header, System.Collections.Generic.List<string[]> rows, float firstColumn)
+        {
+            DrawRow(header, firstColumn, true, false);
+            for (int i = 0; i < rows.Count; i++) DrawRow(rows[i], firstColumn, false, i % 2 == 1);
+        }
+
+        private static void DrawRow(string[] cells, float firstColumn, bool header, bool shaded)
+        {
+            Rect rect = EditorGUILayout.BeginHorizontal();
+            if (shaded) EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.12f));
+            if (header) EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.25f));
+
+            GUIStyle style = header ? EditorStyles.miniBoldLabel : EditorStyles.label;
+            EditorGUILayout.LabelField(cells[0], style, GUILayout.Width(firstColumn));
+            for (int i = 1; i < cells.Length; i++)
+                EditorGUILayout.LabelField(cells[i], style, GUILayout.MinWidth(55));
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void ExportCsv()
+        {
+            string path = EditorUtility.SaveFilePanel("Export simulator results", "", $"balance-{DateTime.Now:yyyy-MM-dd-HHmm}.csv", "csv");
+            if (string.IsNullOrEmpty(path)) return;
+            System.IO.File.WriteAllText(path, stats.ToCsv(runSettings));
+            EditorUtility.RevealInFinder(path);
+        }
 
         // ---------- Running ----------
 
