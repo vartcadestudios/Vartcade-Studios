@@ -33,11 +33,20 @@ namespace TDTS.Bots
 
         private readonly System.Random rng;
 
+        // Players who refused its trade this turn, so it doesn't keep asking them
+        private readonly HashSet<PlayerData> refusedThisTurn = new HashSet<PlayerData>();
+
         public BotBrain(BotProfile profile, System.Random rng)
         {
             Profile = profile;
             this.rng = rng;
         }
+
+        /// <summary>Called when its turn starts.</summary>
+        public void NewTurn() => refusedThisTurn.Clear();
+
+        /// <summary>Called when a player turns down its trade.</summary>
+        public void NoteTradeRefused(PlayerData partner) => refusedThisTurn.Add(partner);
 
         // ---------- What a card is worth ----------
 
@@ -120,6 +129,7 @@ namespace TDTS.Bots
                 foreach (PlayerData partner in Others(table, me))
                 {
                     if (table.EyesClosed && table.IsHuman(partner)) continue; // they couldn't see it
+                    if (refusedThisTurn.Contains(partner)) continue;
 
                     int give = IndexOfMin(me.hand, c => ValueOf(c, me));
                     int want = IndexOfMax(partner.hand, c => ValueOf(c, me));

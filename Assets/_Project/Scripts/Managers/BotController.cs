@@ -96,27 +96,43 @@ namespace TDTS.Managers
 
         private IEnumerator TakeTurn(PlayerData bot, int turn)
         {
+            BotBrain brain = BrainFor(bot);
+            brain.NewTurn();
+
             while (gm.TurnNumber == turn)
             {
                 yield return new WaitForSeconds(GameSettings.BotThinkSeconds(thinkSeconds));
                 if (gm.TurnNumber != turn) yield break;
                 if (gm.PendingTrade != null) continue; // wait for the answer
 
-                if (!PlayBestMove(bot) && gm.TurnNumber == turn) yield break; // nothing worked; leave it
+                int actionsBefore = gm.ActionsLeft;
+                BotMove played = PlayBestMove(bot);
+                if (played == null)
+                {
+                    if (gm.TurnNumber == turn) yield break; // nothing worked; leave it
+                    continue;
+                }
+
+                // A refused trade gives the action back, so don't ask the same player again this turn
+                if (played.kind == MoveKind.Trade)
+                {
+                    while (gm.PendingTrade != null && gm.TurnNumber == turn) yield return null;
+                    if (gm.TurnNumber == turn && gm.ActionsLeft == actionsBefore) brain.NoteTradeRefused(played.target);
+                }
             }
         }
 
-        /// <summary>Tries the brain's moves best first until the game accepts one.</summary>
-        private bool PlayBestMove(PlayerData bot)
+        /// <summary>Tries the brain's moves best first until the game accepts one. Returns the move played, or null.</summary>
+        private BotMove PlayBestMove(PlayerData bot)
         {
             BotBrain brain = BrainFor(bot);
             foreach (BotMove move in brain.RankMoves(table, bot))
             {
                 if (!TryMove(bot, move)) continue;
                 if (logThinking) Debug.Log($"[Bot] {bot.playerName} ({brain.Profile.Label}): {move.kind} - {move.reason}");
-                return true;
+                return move;
             }
-            return false;
+            return null;
         }
 
         private bool TryMove(PlayerData bot, BotMove move) => move.kind switch
