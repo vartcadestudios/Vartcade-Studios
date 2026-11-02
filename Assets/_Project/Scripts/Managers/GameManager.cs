@@ -178,6 +178,8 @@ namespace TDTS.Managers
         public event Action<int> OnLocalPeek;
         /// <summary>Any player peeked at the card at this hand index (the host tells that player's device).</summary>
         public event Action<PlayerData, int> OnPeeked;
+        /// <summary>Any player's Flashlight showed them the back of this card (bots remember it).</summary>
+        public event Action<PlayerData, CardData> OnFlashlightSeen;
 
         private void Awake()
         {
@@ -796,6 +798,7 @@ namespace TDTS.Managers
                     CardData seen = target.hand[rng.Next(target.hand.Count)];
                     Tell(player, $"Flashlight: one of {target.playerName}'s cards is {seen.BackName}. ({card.batteries} batteries left)");
                     if (player == localPlayer) OnCardRevealedToYou?.Invoke(target, seen);
+                    OnFlashlightSeen?.Invoke(player, seen);
                     break;
 
                 case NightActionType.TargetedNightSkip:

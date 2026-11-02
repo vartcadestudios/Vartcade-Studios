@@ -97,7 +97,9 @@ namespace TDTS.UI
             string status = active ? "<b>Taking their turn...</b>" : $"Turn {turn} of {players.Count}";
             int count = GameView.Current.HandCount(p);
             string cards = count == 1 ? "1 card" : $"{count} cards";
-            label.text = $"<b>{p.playerName}</b>\n<size=65%>{cards}  ·  {status}</size>";
+            // Bot seats show their strategy, e.g. "(Aggressive bot)"
+            string botTag = BotController.Current != null ? BotController.Current.TagFor(p) : "";
+            label.text = $"<b>{p.playerName}</b><size=60%>{botTag}</size>\n<size=65%>{cards}  ·  {status}</size>";
             LayOutCards(p.hand);
 
             // Your pick for Trade / Steal wins over the "their turn" colour
