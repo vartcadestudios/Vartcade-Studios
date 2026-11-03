@@ -8,8 +8,8 @@ namespace TDTS.UI
     /// <summary>
     /// Wires the Day and Night action buttons to GameManager for the local player and
     /// greys them out when it isn't your turn. Adds the buttons the scene doesn't have yet
-    /// (Pass, Accept/Decline trade, Peek, Night Play card) as copies of existing ones.
-    /// Pass and End turn stay hidden while actions are limited: every turn uses all its actions.
+    /// (Accept/Decline trade, Peek, Night Play card) as copies of existing ones.
+    /// There is no Pass. End turn stays hidden while actions are limited: every turn uses all its actions.
     /// Scavenge is hidden too: you draw by tapping the draw pile.
     /// </summary>
     public class ActionBarController : MonoBehaviour
@@ -24,7 +24,6 @@ namespace TDTS.UI
         [SerializeField] private Button swapButton;
         [SerializeField] private Button skipButton;
 
-        private Button passButton;
         private Button acceptButton;
         private Button declineButton;
         private Button nightPlayButton;
@@ -52,7 +51,6 @@ namespace TDTS.UI
             skipButton.onClick.AddListener(gm.PassForLocalPlayer);
             SetLabel(skipButton, "End turn");
 
-            passButton = CopyOf(scavengeButton, "Pass", gm.PassForLocalPlayer);
             nightPlayButton = CopyOf(stealButton, "Play card", gm.PlaySelectedForLocalPlayer);
             // Tapping a card at Night only picks it; this looks at the back of the picked card (1 action)
             peekButton = CopyOf(stealButton, "Peek", () => gm.PeekForLocalPlayer(gm.SelectedCardIndex));
@@ -93,7 +91,7 @@ namespace TDTS.UI
             bool day = myTurn && gm.CurrentState == GameState.DayPhase;
             bool night = myTurn && gm.CurrentState == GameState.NightPhase;
             bool tradingOnly = gm.CurrentDayRule == DayRule.TradingOnly;
-            // No Pass or End turn: you use all your actions. They only show when actions
+            // No End turn: you use all your actions. It only shows when actions
             // aren't limited (a testing switch), since then a turn would never end on its own.
             bool canEndTurn = !gm.LimitActions;
 
@@ -102,7 +100,6 @@ namespace TDTS.UI
             tradeButton.gameObject.SetActive(!offeredToMe);
             scavengeButton.gameObject.SetActive(false);
             playCardButton.gameObject.SetActive(!offeredToMe);
-            if (passButton != null) passButton.gameObject.SetActive(!offeredToMe && canEndTurn);
             skipButton.gameObject.SetActive(canEndTurn);
             if (acceptButton != null) acceptButton.gameObject.SetActive(offeredToMe);
             if (declineButton != null)
@@ -113,7 +110,6 @@ namespace TDTS.UI
 
             tradeButton.interactable = day;
             playCardButton.interactable = day && !tradingOnly && !PickedCardIsUnplayable(gm, true);
-            if (passButton != null) passButton.interactable = day;
 
             // One Steal or Swap a night
             stealButton.interactable = night && !gm.StoleOrSwappedThisTurn;
