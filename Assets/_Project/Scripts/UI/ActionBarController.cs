@@ -137,7 +137,7 @@ namespace TDTS.UI
             int index = gm.SelectedCardIndex;
             if (hand == null || index < 0 || index >= hand.Count) return false;
             var card = hand[index];
-            return day ? !card.HasMorningFront : !(card.HasNightBack && card.peeked);
+            return day ? !card.HasMorningFront || card.frontUsed : !(card.HasNightBack && card.peeked);
         }
 
         /// <summary>A copy of an existing button, so new buttons match the row's style.</summary>

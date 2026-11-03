@@ -113,7 +113,7 @@ namespace TDTS.UI
 
             var type = MakeLabel(rect, "Type", size.y * 0.08f, FontStyles.Bold, TextAlignmentOptions.BottomLeft,
                 Vector2.zero, new Vector2(1f, 0f), new Vector2(pad, pad * 0.6f), new Vector2(-pad, size.y * 0.24f));
-            type.text = TypeName(card, false);
+            type.text = card.HasMorningFront && card.frontUsed ? "USED" : TypeName(card, false);
             type.enableAutoSizing = true;
             type.fontSizeMin = 5f;
             type.fontSizeMax = size.y * 0.08f;

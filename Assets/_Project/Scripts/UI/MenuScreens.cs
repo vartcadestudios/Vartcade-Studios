@@ -24,7 +24,7 @@ namespace TDTS.UI
         private static readonly (string tab, string title, string body)[] Pages =
         {
             ("Goal", "Make it to the bunker",
-                "The sun sets in <b>ten days</b>. When it does, the bunker has only <b>two seats</b>.\n\n" +
+                "The sun sets in <b>ten days</b>. When it does, the bunker has only <b>two seats</b> (three with 5 or 6 players).\n\n" +
                 "Whoever holds the <color=#FAC775><b>Bunker Key</b></color> gets a seat, no matter what. " +
                 "It hides on the <b>back</b> of an ordinary Supply card, so you may not know who has it... even if it's you.\n\n" +
                 "The other seats go to players holding <b>3 different kinds</b> of real Supply (Food, Water, Medicine, Entertainment), most kinds first. " +
@@ -42,7 +42,8 @@ namespace TDTS.UI
                 "Players take turns in order. On your turn, do <b>one</b> of these:\n\n" +
                 "<b>Trade</b>  Pick one of your cards, tap a player, then choose which of their cards you want. They accept or refuse.\n" +
                 "<b>Scavenge</b>  Tap the draw pile to draw its top card.\n" +
-                "<b>Play card</b>  Play a <b>Morning Action</b> card, like Swap Deck or Reverse Turn.\n\n" +
+                "<b>Play card</b>  Play a <b>Morning Action</b> card, like Swap Deck or Reverse Turn. Each one works once, " +
+                "and the card stays in your hand, so its back still counts.\n\n" +
                 "There's no passing: your turn ends once you've made your move."),
 
             ("Night", "Night: eyes closed, two actions",

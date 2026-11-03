@@ -269,6 +269,15 @@ namespace TDTS.Managers
             removedFromGame.Clear();
             deck.AddRange(DeckBuilder.BuildDrawPile(deckRecipe, rng, removedFromGame));
 
+            // The Key goes into the top half of the pile, so it nearly always turns up before Sundown
+            int keyAt = deck.FindIndex(c => c.IsKey);
+            CardData keyCard = deck[keyAt];
+            deck.RemoveAt(keyAt);
+            deck.Insert(rng.Next(deck.Count / 2, deck.Count + 1), keyCard); // the end of the list is the top
+
+            // 2 bunker seats, 3 with 5 or 6 players
+            bunkerCapacity = players.Count >= 5 ? 3 : 2;
+
             // S4: deal one card at a time around the table
             foreach (var p in players) p.hand.Clear();
             for (int round = 0; round < StartingHandSize; round++)
@@ -440,7 +449,7 @@ namespace TDTS.Managers
                 bool cardsAllowed = dayRule != DayRule.TradingOnly;
                 return (cardsAllowed && deck.Count > 0)                              // Scavenge
                     || (player.hand.Count > 0 && othersHaveCards)                    // Trade
-                    || (cardsAllowed && player.hand.Any(c => c.HasMorningFront));    // Play card
+                    || (cardsAllowed && player.hand.Any(c => c.HasMorningFront && !c.frontUsed)); // Play card
             }
             if (currentState == GameState.NightPhase)
             {
@@ -688,6 +697,12 @@ namespace TDTS.Managers
             bool isDay = currentState == GameState.DayPhase;
             string cardName = isDay ? card.FrontName : card.BackName;
 
+            if (isDay && card.HasMorningFront && card.frontUsed)
+            {
+                Tell(player, $"You've already used this {cardName}. The card stays in your hand, and its back still counts.");
+                return false;
+            }
+
             bool allowed =
                 (isDay && card.HasMorningFront) ||
                 (currentState == GameState.NightPhase && card.HasNightBack && card.peeked);
@@ -723,8 +738,15 @@ namespace TDTS.Managers
                 return false;
             }
 
-            player.hand.RemoveAt(handIndex);
-            discardPile.Add(card);
+            if (isDay)
+            {
+                card.frontUsed = true; // a played Morning card stays in hand, so its back still counts
+            }
+            else
+            {
+                player.hand.RemoveAt(handIndex);
+                discardPile.Add(card);
+            }
 
             LogAction(player, target == player ? $"{player.playerName} played {cardName} on their own hand."
                 : target != null ? $"{player.playerName} played {cardName} on {target.playerName}."
@@ -1007,7 +1029,11 @@ namespace TDTS.Managers
         /// <summary>Step 1: from Day 6, spin the Rondo for a result that hasn't come up yet.</summary>
         private void SpinRondo()
         {
-            var options = ((RondoResult[])Enum.GetValues(typeof(RondoResult))).Where(r => !rondoUsed.Contains(r)).ToList();
+            // Doomsday Clock would do nothing on the last Day, so it can't come up then
+            var options = ((RondoResult[])Enum.GetValues(typeof(RondoResult)))
+                .Where(r => !rondoUsed.Contains(r))
+                .Where(r => !(r == RondoResult.DoomsdayClock && currentDay >= sundownDay))
+                .ToList();
             if (options.Count == 0) return;
 
             RondoResult result = options[rng.Next(options.Count)];
@@ -1086,6 +1112,32 @@ namespace TDTS.Managers
                 lost++;
             }
             return lost;
+        }
+
+        // ---------- Catch-up ----------
+
+        /// <summary>
+        /// From Day 2, the player furthest from surviving (fewest Supply kinds, then fewest real Supply,
+        /// and not holding the Key) draws a free card at the start of the Day. Ties are picked at random.
+        /// </summary>
+        private void CatchUpDraw()
+        {
+            if (deck.Count == 0) return;
+            var candidates = players.Where(p => !p.HoldsKey).ToList();
+            if (candidates.Count == 0) return;
+            int lowest = candidates.Min(p => p.SupplyRank);
+            var behind = candidates.Where(p => p.SupplyRank == lowest).ToList();
+            PlayerData chosen = behind[rng.Next(behind.Count)];
+
+            GiveCard(chosen, TakeTopCard());
+            AddLog(new LogEntry
+            {
+                text = "Catch-up: you're the furthest from the bunker, so you draw a free card.",
+                viewer = chosen,
+                forOthers = $"{chosen.playerName} draws a catch-up card.",
+            });
+            OnDeckChanged?.Invoke();
+            NotifyHandsChanged();
         }
 
         // ---------- Sundown (spec G18, R1, R2) ----------
@@ -1170,6 +1222,7 @@ namespace TDTS.Managers
                 todaysRondo = null;
                 AddLog($"Day {currentDay} of {sundownDay}. Turn order: {string.Join(" > ", OrderedNames())}");
                 if (currentDay >= RondoStartDay) SpinRondo();
+                if (currentDay > 1) CatchUpDraw();
             }
             else if (next == GameState.NightPhase)
             {

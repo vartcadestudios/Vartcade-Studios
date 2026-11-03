@@ -67,21 +67,23 @@ namespace TDTS.Simulation
         public StealRule stealRule = StealRule.PickCard;
 
         // A played Morning card stays in your hand (its back still counts); each front can only be used once
-        public bool keepMorningCards = false;
+        public bool keepMorningCards = true;
 
         // Your first Night card each Night doesn't use an action
         public bool freeNightCard = false;
 
         // Doomsday Clock can't come up on the last Day, where it would do nothing
-        public bool noDoomsdayOnLastDay = false;
+        public bool noDoomsdayOnLastDay = true;
 
         // From Day 2, the player furthest from surviving draws a free card at the start of each Day
-        public bool catchUpDraw = false;
+        public bool catchUpDraw = true;
 
         // The Bunker Key is shuffled into the top half of the draw pile, so it's almost always found
-        public bool keyInTopHalf = false;
+        public bool keyInTopHalf = true;
 
-        public int bunkerSeats = 2;
+        public int bunkerSeats = 0; // 0 = like the game: 2 seats, 3 with 5 or 6 players
+
+        public int SeatsFor(int playerCount) => bunkerSeats > 0 ? bunkerSeats : playerCount >= 5 ? 3 : 2;
 
         public bool rondo = true;         // Rondo events from Day 6
         public bool strongRondo = false;  // from Day 4, Purge 10, Hunger/Outbreak take 2, Doomsday takes 2 days

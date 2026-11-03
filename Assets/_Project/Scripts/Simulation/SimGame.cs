@@ -157,7 +157,7 @@ namespace TDTS.Simulation
             DecideSurvivors();
 
             result.sundownDay = sundownDay;
-            result.bunkerSeats = settings.bunkerSeats;
+            result.bunkerSeats = settings.SeatsFor(players.Count);
             foreach (PlayerData p in players)
             {
                 SeatResult r = F(p);
@@ -679,7 +679,7 @@ namespace TDTS.Simulation
                 p.resultReason = "not enough Supply";
             }
 
-            int seatsLeft = settings.bunkerSeats;
+            int seatsLeft = settings.SeatsFor(players.Count);
 
             PlayerData keyHolder = players.FirstOrDefault(p => p.HoldsKey);
             if (keyHolder != null)

@@ -160,7 +160,8 @@ namespace TDTS.EditorTools
             settings.keyInTopHalf = EditorGUILayout.Toggle(
                 new GUIContent("Key in the top half", "The Bunker Key is shuffled into the top half of the draw pile."),
                 settings.keyInTopHalf);
-            settings.bunkerSeats = EditorGUILayout.IntSlider(new GUIContent("Bunker seats"), settings.bunkerSeats, 1, 4);
+            settings.bunkerSeats = EditorGUILayout.IntSlider(
+                new GUIContent("Bunker seats", "0 = like the game: 2 seats, 3 with 5 or 6 players."), settings.bunkerSeats, 0, 4);
 
             settings.rondo = EditorGUILayout.Toggle(new GUIContent("Rondo"), settings.rondo);
             if (settings.rondo)
@@ -216,7 +217,7 @@ namespace TDTS.EditorTools
             switch (tab)
             {
                 case 0:
-                    Explain("The whole run at a glance. The bunker has 2 seats, so with 4 players the fair share is 50% each.");
+                    Explain("The whole run at a glance. The bunker has 2 seats (3 with 5 or 6 players), so with 4 players the fair share is 50% each.");
                     DrawTable(stats.OverviewHeader, stats.OverviewRows(runSettings), 250);
                     break;
                 case 1:

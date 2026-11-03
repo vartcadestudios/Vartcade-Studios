@@ -14,6 +14,7 @@ namespace TDTS.Networking
         public SupplyKind frontSupply;
         public MorningActionType morningAction;
         public int keyDesignIndex;
+        public bool frontUsed;
 
         public bool peeked;
         public BackType back;
@@ -27,6 +28,7 @@ namespace TDTS.Networking
             frontSupply = card.frontSupply,
             morningAction = card.morningAction,
             keyDesignIndex = card.keyDesignIndex,
+            frontUsed = card.frontUsed,
         };
 
         public static CardSnapshot From(CardData card)
@@ -37,6 +39,7 @@ namespace TDTS.Networking
                 frontSupply = card.frontSupply,
                 morningAction = card.morningAction,
                 keyDesignIndex = card.keyDesignIndex,
+                frontUsed = card.frontUsed,
                 peeked = card.peeked,
             };
             if (card.peeked)
@@ -54,6 +57,7 @@ namespace TDTS.Networking
             frontSupply = frontSupply,
             morningAction = morningAction,
             keyDesignIndex = keyDesignIndex,
+            frontUsed = frontUsed,
             peeked = peeked,
             back = back,
             backSupply = backSupply,
@@ -66,6 +70,7 @@ namespace TDTS.Networking
             serializer.SerializeValue(ref frontSupply);
             serializer.SerializeValue(ref morningAction);
             serializer.SerializeValue(ref keyDesignIndex);
+            serializer.SerializeValue(ref frontUsed);
             serializer.SerializeValue(ref peeked);
             serializer.SerializeValue(ref back);
             serializer.SerializeValue(ref backSupply);

@@ -281,7 +281,9 @@ namespace TDTS.UI
                 cards[i].background.color = color;
                 cards[i].label.color = typeLabels[i].color = CardView.TextColorOn(color);
                 cards[i].label.text = revealed ? card.BackName : card.FrontName;
-                typeLabels[i].text = revealed ? $"BACK Â· {CardView.TypeName(card, true)}" : CardView.TypeName(card, false);
+                typeLabels[i].text = revealed ? $"BACK · {CardView.TypeName(card, true)}"
+                    : card.HasMorningFront && card.frontUsed ? "MORNING ACTION · USED"
+                    : CardView.TypeName(card, false);
                 // Spec C6: a peeked card only shows a marker, not its back
                 peekedMarks[i].SetActive(card.peeked && !revealed);
 

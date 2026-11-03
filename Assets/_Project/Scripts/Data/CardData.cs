@@ -39,6 +39,7 @@ namespace TDTS.Data
 
         public int keyDesignIndex;              // BunkerKey back only: which of the 4 Keys (0-3); its front is that Supply
         public bool peeked;                     // Spec V8: the owner has seen the back
+        public bool frontUsed;                  // A Morning front works once; the card stays in hand after
 
         public bool IsKey => back == BackType.BunkerKey;
         public bool IsRealSupply => back == BackType.Supply;
