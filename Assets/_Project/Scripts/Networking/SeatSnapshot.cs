@@ -19,7 +19,6 @@ namespace TDTS.Networking
         public BackType back;
         public SupplyKind backSupply;
         public NightActionType nightAction;
-        public int batteries;
 
         /// <summary>Just the front: how anyone else's card is sent, since fronts are public.</summary>
         public static CardSnapshot FrontOf(CardData card) => new CardSnapshot
@@ -45,7 +44,6 @@ namespace TDTS.Networking
                 snap.back = card.back;
                 snap.backSupply = card.backSupply;
                 snap.nightAction = card.nightAction;
-                snap.batteries = card.batteries;
             }
             return snap;
         }
@@ -60,7 +58,6 @@ namespace TDTS.Networking
             back = back,
             backSupply = backSupply,
             nightAction = nightAction,
-            batteries = batteries,
         };
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
@@ -73,7 +70,6 @@ namespace TDTS.Networking
             serializer.SerializeValue(ref back);
             serializer.SerializeValue(ref backSupply);
             serializer.SerializeValue(ref nightAction);
-            serializer.SerializeValue(ref batteries);
         }
     }
 

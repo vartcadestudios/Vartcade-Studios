@@ -266,22 +266,35 @@ namespace TDTS.Bots
             for (int i = 0; i < me.hand.Count; i++)
             {
                 CardData card = me.hand[i];
-                if (!card.HasNightBack || !card.peeked || leader == null) continue;
+                if (!card.HasNightBack || !card.peeked) continue;
 
                 switch (card.nightAction)
                 {
                     case NightActionType.Flashlight:
-                        PlayerData mostUnknown = Others(table, me).OrderByDescending(p => p.hand.Count(c => !Memory.Knows(c))).First();
+                        // One use that lights a whole hand, its own included: aim it where it knows least
+                        PlayerData darkest = null;
+                        int unknownCards = 0;
+                        foreach (PlayerData p in table.Players)
+                        {
+                            int unknown = p == me
+                                ? me.hand.Count(c => c != card && !KnowsBack(c, me))
+                                : p.hand.Count(c => !Memory.Knows(c));
+                            if (unknown > unknownCards) { darkest = p; unknownCards = unknown; }
+                        }
+                        if (darkest == null) break;
                         moves.Add(new BotMove
                         {
-                            kind = MoveKind.PlayCard, handIndex = i, target = mostUnknown,
-                            score = 0.8f * Profile.caution,
-                            reason = $"Flashlight: find out what {mostUnknown.playerName} is holding",
+                            kind = MoveKind.PlayCard, handIndex = i, target = darkest,
+                            score = 0.35f * unknownCards * Profile.caution,
+                            reason = darkest == me
+                                ? $"Flashlight on its own hand: {unknownCards} cards it hasn't seen"
+                                : $"Flashlight: see all {unknownCards} unknown cards {darkest.playerName} is holding",
                         });
                         break;
 
                     case NightActionType.TargetedNightSkip:
                     case NightActionType.TargetedDaySkip:
+                        if (leader == null) break;
                         moves.Add(new BotMove
                         {
                             kind = MoveKind.PlayCard, handIndex = i, target = leader,

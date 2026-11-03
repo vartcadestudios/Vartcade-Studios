@@ -180,6 +180,8 @@ namespace TDTS.Managers
         public event Action<PlayerData, int> OnPeeked;
         /// <summary>Any player's Flashlight showed them the back of this card (bots remember it).</summary>
         public event Action<PlayerData, CardData> OnFlashlightSeen;
+        /// <summary>The local player's Flashlight lit up every card in this player's hand (theirs may be yours).</summary>
+        public event Action<PlayerData, List<CardData>> OnLocalFlashlight;
 
         private void Awake()
         {
@@ -705,26 +707,27 @@ namespace TDTS.Managers
                 Tell(player, "Trading Only today: no Action Cards.");
                 return false;
             }
+            // R10: the Flashlight can light up your own hand; with nobody picked, it does
+            bool canTargetSelf = CanTargetSelf(card, isDay);
             if (!NeedsTarget(card, isDay))
             {
                 target = null;
             }
-            else if (target == null || target == player)
+            else if (canTargetSelf && target == null)
+            {
+                target = player;
+            }
+            else if (target == null || (target == player && !canTargetSelf))
             {
                 Tell(player, $"Tap a player first, then play {cardName}.");
                 return false;
             }
 
-            // Flashlight stays in hand until its batteries run out (R10)
-            bool keepInHand = !isDay && card.nightAction == NightActionType.Flashlight && card.batteries > 1;
-            if (!keepInHand)
-            {
-                player.hand.RemoveAt(handIndex);
-                discardPile.Add(card);
-            }
+            player.hand.RemoveAt(handIndex);
+            discardPile.Add(card);
 
-            LogAction(player, target != null
-                ? $"{player.playerName} played {cardName} on {target.playerName}."
+            LogAction(player, target == player ? $"{player.playerName} played {cardName} on their own hand."
+                : target != null ? $"{player.playerName} played {cardName} on {target.playerName}."
                 : $"{player.playerName} played {cardName}.");
 
             if (isDay) ResolveMorningCard(card.morningAction, player, target);
@@ -739,6 +742,10 @@ namespace TDTS.Managers
 
         public static bool NeedsTarget(CardData card, bool isDay) =>
             isDay ? card.morningAction == MorningActionType.SwapDeck : card.HasNightBack;
+
+        /// <summary>Only the Flashlight may be aimed at your own hand.</summary>
+        public static bool CanTargetSelf(CardData card, bool isDay) =>
+            !isDay && card.HasNightBack && card.nightAction == NightActionType.Flashlight;
 
         /// <summary>G19 to G23.</summary>
         private void ResolveMorningCard(MorningActionType action, PlayerData player, PlayerData target)
@@ -793,12 +800,20 @@ namespace TDTS.Managers
             switch (card.nightAction)
             {
                 case NightActionType.Flashlight:
-                    card.batteries--;
-                    if (target.hand.Count == 0) break;
-                    CardData seen = target.hand[rng.Next(target.hand.Count)];
-                    Tell(player, $"Flashlight: one of {target.playerName}'s cards is {seen.BackName}. ({card.batteries} batteries left)");
-                    if (player == localPlayer) OnCardRevealedToYou?.Invoke(target, seen);
-                    OnFlashlightSeen?.Invoke(player, seen);
+                    // R10: one use, and it lights every card in the chosen hand (yours included)
+                    var lit = new List<CardData>(target.hand);
+                    if (target == player) foreach (CardData c in lit) c.peeked = true;
+
+                    string backs = lit.Count == 0 ? "no cards"
+                        : string.Join(", ", lit.Select(c => $"{c.FrontName} is {c.BackName}"));
+                    Tell(player, target == player ? $"Flashlight on your own hand: {backs}." : $"Flashlight on {target.playerName}: {backs}.");
+
+                    foreach (CardData c in lit)
+                    {
+                        OnFlashlightSeen?.Invoke(player, c);
+                        if (player == localPlayer) OnCardRevealedToYou?.Invoke(target, c);
+                    }
+                    if (player == localPlayer) OnLocalFlashlight?.Invoke(target, lit);
                     break;
 
                 case NightActionType.TargetedNightSkip:

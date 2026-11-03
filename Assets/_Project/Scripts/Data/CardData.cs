@@ -21,7 +21,7 @@ namespace TDTS.Data
     // Spec 2.1: 18 Night backs, 3 variants x 6
     public enum NightActionType
     {
-        Flashlight,        // 3 batteries: see the back of another player's card
+        Flashlight,        // One use: see the backs of every card in one hand, yours included
         TargetedNightSkip, // Skip a chosen player at night
         TargetedDaySkip    // Pick a player to skip the next Morning round
     }
@@ -29,8 +29,6 @@ namespace TDTS.Data
     [Serializable]
     public class CardData
     {
-        public const int FlashlightBatteries = 3;
-
         public FrontType front;
         public SupplyKind frontSupply;          // front == Supply only
         public MorningActionType morningAction; // front == MorningAction only
@@ -40,7 +38,6 @@ namespace TDTS.Data
         public NightActionType nightAction;     // back == NightAction only
 
         public int keyDesignIndex;              // BunkerKey back only: which of the 4 Keys (0-3); its front is that Supply
-        public int batteries = FlashlightBatteries; // Flashlight only (spec V9)
         public bool peeked;                     // Spec V8: the owner has seen the back
 
         public bool IsKey => back == BackType.BunkerKey;

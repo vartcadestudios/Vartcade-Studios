@@ -74,6 +74,32 @@ namespace TDTS.UI
             Overlay(canvas).BuildCloseUp(view, target);
         }
 
+        /// <summary>
+        /// Flashlight (G24): every card in one hand, back up, for your eyes only. Tap a card to see its front.
+        /// Stays until you close it, so the result isn't lost when your turn ends.
+        /// </summary>
+        public static void OpenFlashlight(Transform canvas, PlayerData target, List<CardData> lit, bool yourOwn)
+        {
+            CardPicker picker = Overlay(canvas);
+            Vector2 size = new Vector2(BigWidth, BigHeight);
+            RectTransform panel = picker.Panel(lit.Count, size, 540f,
+                yourOwn ? "Flashlight: your hand" : $"Flashlight: {target.playerName}'s hand",
+                lit.Count == 0 ? "There were no cards to light up." : "Every back, for your eyes only. Tap a card to see its front.");
+
+            float step = Step(lit.Count, size);
+            float rowWidth = RowWidth(lit.Count, size);
+            var row = NewRect("Cards", panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            row.anchoredPosition = new Vector2(0f, 6f);
+            for (int i = 0; i < lit.Count; i++)
+            {
+                CardView card = CardView.Create(row, size);
+                card.Bind(lit[i], true);
+                ((RectTransform)card.transform).anchoredPosition = new Vector2(-rowWidth / 2f + size.x / 2f + i * step, 0f);
+            }
+
+            Bottom(panel, new[] { MakeButtonIn(panel, "Close", ButtonColor, picker.Close) });
+        }
+
         private static CardPicker Overlay(Transform canvas)
         {
             var overlay = NewRect("CardPicker", canvas, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);

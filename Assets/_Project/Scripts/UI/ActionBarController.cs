@@ -66,7 +66,22 @@ namespace TDTS.UI
             // The added buttons don't fit at their scene width, so let each row share its width out
             FitToRow(scavengeButton);
             FitToRow(stealButton);
+
+            // Flashlight results pop up on this device (offline, or the host's own seat).
+            // Online players get the same result as a line in their log.
+            flashlightCanvas = canvas;
+            if (GameManager.Instance != null) GameManager.Instance.OnLocalFlashlight += ShowFlashlight;
         }
+
+        private Transform flashlightCanvas;
+
+        private void OnDestroy()
+        {
+            if (GameManager.Instance != null) GameManager.Instance.OnLocalFlashlight -= ShowFlashlight;
+        }
+
+        private void ShowFlashlight(TDTS.Data.PlayerData target, System.Collections.Generic.List<TDTS.Data.CardData> lit) =>
+            CardPicker.OpenFlashlight(flashlightCanvas, target, lit, target == GameManager.Instance.LocalPlayer);
 
         private void Update()
         {

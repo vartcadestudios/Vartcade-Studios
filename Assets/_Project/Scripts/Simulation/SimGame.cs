@@ -337,15 +337,13 @@ namespace TDTS.Simulation
                            (state == GameState.NightPhase && card.HasNightBack && card.peeked);
             if (!allowed) return false;
 
+            bool canTargetSelf = GameManager.CanTargetSelf(card, isDay);
             if (!GameManager.NeedsTarget(card, isDay)) target = null;
-            else if (target == null || target == player) return false;
+            else if (canTargetSelf && target == null) target = player;
+            else if (target == null || (target == player && !canTargetSelf)) return false;
 
-            bool keepInHand = !isDay && card.nightAction == NightActionType.Flashlight && card.batteries > 1;
-            if (!keepInHand)
-            {
-                player.hand.RemoveAt(handIndex);
-                discardPile.Add(card);
-            }
+            player.hand.RemoveAt(handIndex);
+            discardPile.Add(card);
 
             result.cardPlays.Add((isDay ? card.FrontName : card.BackName, seatOf[player]));
 
@@ -397,8 +395,12 @@ namespace TDTS.Simulation
             switch (card.nightAction)
             {
                 case NightActionType.Flashlight:
-                    card.batteries--;
-                    if (target.hand.Count > 0) brains[player].Memory.Saw(target.hand[rng.Next(target.hand.Count)]);
+                    // R10: one use, lights every card in the chosen hand (yours included)
+                    foreach (CardData c in target.hand)
+                    {
+                        brains[player].Memory.Saw(c);
+                        if (target == player) c.peeked = true;
+                    }
                     break;
                 case NightActionType.TargetedNightSkip:
                     target.nightSkip = true;
