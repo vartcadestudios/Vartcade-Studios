@@ -42,6 +42,8 @@ namespace TDTS.Simulation
         public readonly Dictionary<MoveKind, int>[] movesBySeat;
         public readonly List<RondoResult> rondo = new List<RondoResult>();
         public int sundownDay;
+        public int bunkerSeats = 2;
+        public int catchUpDraws;
         public int tradesOffered;
         public int tradesAccepted;
         public int stalledTurns; // turns that ended early because no move went through
@@ -75,6 +77,8 @@ namespace TDTS.Simulation
         private readonly List<RondoResult> rondoUsed = new List<RondoResult>();
         private readonly HashSet<PlayerData> hadTurn = new HashSet<PlayerData>();
         private readonly HashSet<PlayerData> stolenFromTonight = new HashSet<PlayerData>();
+        private readonly HashSet<CardData> usedFronts = new HashSet<CardData>();
+        private bool freeNightCardUsed;
         private readonly SimGameResult result;
 
         private GameState state = GameState.Init;
@@ -136,6 +140,7 @@ namespace TDTS.Simulation
                 dayRule = DayRule.Normal;
                 foreach (var pair in brains) pair.Value.OnNewDay(pair.Key);
                 if (settings.rondo && currentDay >= (settings.strongRondo ? 4 : GameManager.RondoStartDay)) SpinRondo();
+                if (settings.catchUpDraw && currentDay > 1) CatchUpDraw();
                 TrackKey(null);
                 if (currentDay >= sundownDay && lastDayStart == null)
                     lastDayStart = players.ToDictionary(p => p, p => (Qualifying(p), p.HoldsKey));
@@ -152,6 +157,7 @@ namespace TDTS.Simulation
             DecideSurvivors();
 
             result.sundownDay = sundownDay;
+            result.bunkerSeats = settings.bunkerSeats;
             foreach (PlayerData p in players)
             {
                 SeatResult r = F(p);
@@ -185,6 +191,13 @@ namespace TDTS.Simulation
 
             DeckBuilder.Shuffle(players, rng);
             deck.AddRange(DeckBuilder.BuildDrawPile(settings.BuildRecipe(), rng, removedFromGame));
+            if (settings.keyInTopHalf)
+            {
+                int key = deck.FindIndex(c => c.IsKey);
+                CardData keyCard = deck[key];
+                deck.RemoveAt(key);
+                deck.Insert(rng.Next(deck.Count / 2, deck.Count + 1), keyCard); // the end of the list is the top
+            }
 
             for (int round = 0; round < GameManager.StartingHandSize; round++)
                 foreach (PlayerData p in players)
@@ -216,6 +229,7 @@ namespace TDTS.Simulation
         {
             hadTurn.Add(p);
             stolenThisTurn = null;
+            freeNightCardUsed = false;
             stoleOrSwapped = false;
             peeksThisTurn = 0;
 
@@ -287,6 +301,28 @@ namespace TDTS.Simulation
         }
 
         private SeatResult F(PlayerData p) => result.seats[seatOf[p]];
+
+        public bool CanStealFrom(PlayerData thief, PlayerData victim)
+        {
+            if (settings.stealRule != StealRule.AdjacentOnly) return true;
+            int n = players.Count, a = players.IndexOf(thief), b = players.IndexOf(victim);
+            int gap = Math.Abs(a - b);
+            return gap == 1 || gap == n - 1;
+        }
+
+        public bool FrontUsed(CardData card) => usedFronts.Contains(card);
+        public bool KeepsMorningCards => settings.keepMorningCards;
+
+        /// <summary>Catch-up: the player furthest from surviving (fewest kinds, then fewest Supply) draws a free card.</summary>
+        private void CatchUpDraw()
+        {
+            if (deck.Count == 0) return;
+            int lowest = players.Min(Rank);
+            var behind = players.Where(x => Rank(x) == lowest && !x.HoldsKey).ToList();
+            if (behind.Count == 0) return;
+            GiveCard(behind[rng.Next(behind.Count)], TakeTopCard());
+            result.catchUpDraws++;
+        }
 
         private void CountAction(PlayerData p)
         {
@@ -378,7 +414,9 @@ namespace TDTS.Simulation
                 case MoveKind.Steal:
                     if (!isNight || stoleOrSwapped || m.target == null || m.target == p || !ValidIndex(m.target, m.targetCardIndex)) return false;
                     if (settings.stealProtection && stolenFromTonight.Contains(m.target)) return false;
+                    if (!CanStealFrom(p, m.target)) return false;
                     stolenFromTonight.Add(m.target);
+                    if (settings.stealRule == StealRule.Blind) m.targetCardIndex = rng.Next(m.target.hand.Count);
                     CardData stolen = m.target.hand[m.targetCardIndex];
                     F(m.target).timesStolenFrom++;
                     if (stolen.IsRealSupply) F(m.target).supplyTaken++;
@@ -479,15 +517,24 @@ namespace TDTS.Simulation
             else if (canTargetSelf && target == null) target = player;
             else if (target == null || (target == player && !canTargetSelf)) return false;
 
-            player.hand.RemoveAt(handIndex);
-            discardPile.Add(card);
+            if (isDay && settings.keepMorningCards)
+            {
+                if (usedFronts.Contains(card)) return false;
+                usedFronts.Add(card); // the card stays in hand, its back still counts
+            }
+            else
+            {
+                player.hand.RemoveAt(handIndex);
+                discardPile.Add(card);
+            }
 
             result.cardPlays.Add((isDay ? card.FrontName : card.BackName, seatOf[player]));
 
             if (isDay) ResolveMorningCard(card.morningAction, player, target);
             else ResolveNightCard(card, player, target);
 
-            SpendAction();
+            if (!isDay && settings.freeNightCard && !freeNightCardUsed) freeNightCardUsed = true;
+            else SpendAction();
             return true;
         }
 
@@ -558,7 +605,10 @@ namespace TDTS.Simulation
 
         private void SpinRondo()
         {
-            var options = ((RondoResult[])Enum.GetValues(typeof(RondoResult))).Where(r => !rondoUsed.Contains(r)).ToList();
+            var options = ((RondoResult[])Enum.GetValues(typeof(RondoResult)))
+                .Where(r => !rondoUsed.Contains(r))
+                .Where(r => !(settings.noDoomsdayOnLastDay && r == RondoResult.DoomsdayClock && currentDay >= sundownDay))
+                .ToList();
             if (options.Count == 0) return;
 
             RondoResult spun = options[rng.Next(options.Count)];
@@ -629,7 +679,7 @@ namespace TDTS.Simulation
                 p.resultReason = "not enough Supply";
             }
 
-            int seatsLeft = 2;
+            int seatsLeft = settings.bunkerSeats;
 
             PlayerData keyHolder = players.FirstOrDefault(p => p.HoldsKey);
             if (keyHolder != null)

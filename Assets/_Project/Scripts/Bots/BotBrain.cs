@@ -197,8 +197,9 @@ namespace TDTS.Bots
             for (int i = 0; i < me.hand.Count; i++)
             {
                 CardData card = me.hand[i];
-                if (!card.HasMorningFront) continue;
-                float cost = ValueOf(card, me) - MorningFrontBonus; // playing it throws the back away
+                if (!card.HasMorningFront || table.FrontUsed(card)) continue;
+                // Playing it throws the back away, unless played cards stay in hand
+                float cost = table.KeepsMorningCards ? 0f : ValueOf(card, me) - MorningFrontBonus;
 
                 switch (card.morningAction)
                 {
@@ -279,6 +280,7 @@ namespace TDTS.Bots
             {
                 foreach (PlayerData victim in Others(table, me))
                 {
+                    if (!table.CanStealFrom(me, victim)) continue;
                     // Steal: it picks which card to take, so it takes the one it values most
                     int best = IndexOfMax(victim.hand, c => ValueOf(c, me));
                     CardData taking = victim.hand[best];

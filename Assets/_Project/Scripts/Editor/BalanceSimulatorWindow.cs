@@ -144,12 +144,34 @@ namespace TDTS.EditorTools
                 new GUIContent("Steal protection", "Once you've been stolen from, nobody can steal from you again that Night."),
                 settings.stealProtection);
 
+            settings.stealRule = (StealRule)EditorGUILayout.EnumPopup(
+                new GUIContent("Steal rule", "PickCard: choose which card to take (the game). Blind: take one at random. " +
+                                             "AdjacentOnly: only from a player sitting next to you."),
+                settings.stealRule);
+            settings.keepMorningCards = EditorGUILayout.Toggle(
+                new GUIContent("Keep played Morning cards", "The card stays in your hand so its back still counts; each front works once."),
+                settings.keepMorningCards);
+            settings.freeNightCard = EditorGUILayout.Toggle(
+                new GUIContent("First Night card is free", "Your first Night card each Night doesn't use an action."),
+                settings.freeNightCard);
+            settings.catchUpDraw = EditorGUILayout.Toggle(
+                new GUIContent("Catch-up draw", "From Day 2, the player furthest from surviving draws a free card each Day."),
+                settings.catchUpDraw);
+            settings.keyInTopHalf = EditorGUILayout.Toggle(
+                new GUIContent("Key in the top half", "The Bunker Key is shuffled into the top half of the draw pile."),
+                settings.keyInTopHalf);
+            settings.bunkerSeats = EditorGUILayout.IntSlider(new GUIContent("Bunker seats"), settings.bunkerSeats, 1, 4);
+
             settings.rondo = EditorGUILayout.Toggle(new GUIContent("Rondo"), settings.rondo);
             if (settings.rondo)
                 settings.strongRondo = EditorGUILayout.Toggle(
                     new GUIContent("  Stronger Rondo", "Starts on Day 4. Purge takes 10 cards, Hunger and Outbreak take 2 cards each, " +
                                                        "Doomsday Clock takes 2 days."),
                     settings.strongRondo);
+            if (settings.rondo)
+                settings.noDoomsdayOnLastDay = EditorGUILayout.Toggle(
+                    new GUIContent("  No Doomsday on the last Day", "Doomsday Clock can't come up when it would do nothing."),
+                    settings.noDoomsdayOnLastDay);
         }
 
         private void DrawRun()

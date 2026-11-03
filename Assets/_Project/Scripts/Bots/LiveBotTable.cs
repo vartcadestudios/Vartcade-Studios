@@ -27,5 +27,8 @@ namespace TDTS.Bots
         public int ConversionsLeft => 0;
         public bool PeekRequired => true;
         public bool NeedDifferentKinds => true;
+        public bool CanStealFrom(PlayerData thief, PlayerData victim) => true;
+        public bool FrontUsed(CardData card) => false;
+        public bool KeepsMorningCards => false;
     }
 }

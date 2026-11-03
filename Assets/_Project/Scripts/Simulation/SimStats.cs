@@ -95,7 +95,8 @@ namespace TDTS.Simulation
 
         public float AvgSurvivors => games == 0 ? 0f : (float)survivors / games;
         /// <summary>What every strategy would get if all played equally well: 2 seats shared by everyone.</summary>
-        public float FairShare => players == 0 ? 0f : Math.Min(1f, 2f / players);
+        public int bunkerSeats = 2;
+        public float FairShare => players == 0 ? 0f : Math.Min(1f, (float)bunkerSeats / players);
 
         private static readonly HashSet<string> MorningNames =
             new HashSet<string>(((MorningActionType[])Enum.GetValues(typeof(MorningActionType))).Select(CardData.NameOf));
@@ -104,6 +105,7 @@ namespace TDTS.Simulation
         {
             games++;
             players = game.seats.Count;
+            bunkerSeats = game.bunkerSeats;
             tradesOffered += game.tradesOffered;
             tradesAccepted += game.tradesAccepted;
             stalledTurns += game.stalledTurns;
@@ -206,7 +208,7 @@ namespace TDTS.Simulation
                              $"draw rule {s.drawRule}{(s.conversionCost > 0 ? $", convert {s.conversionCost} cards for 1 Supply" : "")}" +
                              $"{(s.allCardsVisible ? ", all cards visible" : "")}{(!s.rondo ? ", no Rondo" : s.strongRondo ? ", strong Rondo" : "")}" +
                              $"{(s.forgetfulPlayers ? ", forgetful players" : "")}" },
-            new[] { "Survivors per game", $"{AvgSurvivors:0.00} of 2 seats" },
+            new[] { "Survivors per game", $"{AvgSurvivors:0.00} of {bunkerSeats} seats" },
             new[] { "Fair share per player", Pct(FairShare) },
             new[] { "Games where nobody survived", Pct(gamesNobodySurvived, games) },
             new[] { "Someone held the Key at Sundown", Pct(keyHolderAtSundown, games) },

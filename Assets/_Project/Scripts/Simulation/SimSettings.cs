@@ -15,6 +15,14 @@ namespace TDTS.Simulation
         ForcedEvenDays// on Days 2, 4, 6, 8 and 10 your Day turn starts with a draw that uses 1 action
     }
 
+    /// <summary>How Steal works in a simulated game.</summary>
+    public enum StealRule
+    {
+        PickCard,     // the real game: you choose which of their cards to take
+        Blind,        // you take one of their cards at random
+        AdjacentOnly  // you choose the card, but only from a player sitting next to you
+    }
+
     /// <summary>The knobs the Balance Simulator can turn. Defaults match the real game.</summary>
     [Serializable]
     public class SimSettings
@@ -55,6 +63,25 @@ namespace TDTS.Simulation
 
         // Protection: once you've been stolen from, nobody can steal from you again until the next Night
         public bool stealProtection = false;
+
+        public StealRule stealRule = StealRule.PickCard;
+
+        // A played Morning card stays in your hand (its back still counts); each front can only be used once
+        public bool keepMorningCards = false;
+
+        // Your first Night card each Night doesn't use an action
+        public bool freeNightCard = false;
+
+        // Doomsday Clock can't come up on the last Day, where it would do nothing
+        public bool noDoomsdayOnLastDay = false;
+
+        // From Day 2, the player furthest from surviving draws a free card at the start of each Day
+        public bool catchUpDraw = false;
+
+        // The Bunker Key is shuffled into the top half of the draw pile, so it's almost always found
+        public bool keyInTopHalf = false;
+
+        public int bunkerSeats = 2;
 
         public bool rondo = true;         // Rondo events from Day 6
         public bool strongRondo = false;  // from Day 4, Purge 10, Hunger/Outbreak take 2, Doomsday takes 2 days

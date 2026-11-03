@@ -33,6 +33,15 @@ namespace TDTS.Bots
         /// <summary>True when qualifying needs 3 different Supply kinds rather than any 3 real Supply.</summary>
         bool NeedDifferentKinds { get; }
 
+        /// <summary>Test rules: whether this thief may steal from this player at all.</summary>
+        bool CanStealFrom(PlayerData thief, PlayerData victim);
+
+        /// <summary>Test rule: a kept Morning card whose front has already been used.</summary>
+        bool FrontUsed(CardData card);
+
+        /// <summary>Test rule: playing a Morning card keeps it in your hand.</summary>
+        bool KeepsMorningCards { get; }
+
         /// <summary>Test rule: cards given up for 1 real Supply (0 = conversion is off).</summary>
         int ConversionCost { get; }
         /// <summary>Real Supply cards still available to convert into.</summary>
