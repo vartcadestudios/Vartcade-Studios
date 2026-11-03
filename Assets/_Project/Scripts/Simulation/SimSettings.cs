@@ -34,8 +34,8 @@ namespace TDTS.Simulation
 
         // Action cards in the 72: Morning fronts per type (Swap Deck, Reverse Turn, Skip Next Player,
         // Everyone +1 Card, Everyone Switches) and Night backs per type (Flashlight, Targeted Night Skip, Targeted Day Skip)
-        public int[] morningFronts = { 4, 4, 4, 3, 3 };
-        public int[] nightBacks = { 6, 6, 6 };
+        public int[] morningFronts = { 4, 4, 4, 4, 4 };
+        public int[] nightBacks = { 8, 6, 6 };
 
         // Of the cards without a Night back, how many have a real Supply back (the rest are Trash)
         public int supplyBacks = 36;

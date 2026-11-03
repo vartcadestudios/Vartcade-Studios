@@ -13,13 +13,14 @@ namespace TDTS.Data
         public const int CardCount = 72;
         public const int KeyDesigns = 4;
 
-        [Tooltip("Morning fronts per variant, in MorningActionType order. The rest of the fronts are Supply.")]
-        public int[] morningFronts = { 4, 4, 4, 3, 3 };
+        [Tooltip("Morning fronts per variant, in MorningActionType order: 4 each of Swap Deck, Reverse Turn, " +
+                 "Skip Next Player, Everyone +1 Card, Everyone Switches. The rest of the fronts are Supply.")]
+        public int[] morningFronts = { 4, 4, 4, 4, 4 };
 
-        [Tooltip("Night backs per variant, in NightActionType order.")]
-        public int[] nightBacks = { 6, 6, 6 };
+        [Tooltip("Night backs per variant, in NightActionType order: 8 Flashlight, 6 Targeted Night Skip, 6 Targeted Day Skip.")]
+        public int[] nightBacks = { 8, 6, 6 };
 
-        [Tooltip("PLACEHOLDER (spec Open Items): Supply backs among the non-Night backs. The rest are Trash.")]
+        [Tooltip("PLACEHOLDER (spec Open Items): Supply backs among the 52 non-Night backs. The rest (16) are Trash.")]
         public int supplyBacks = 36;
     }
 }

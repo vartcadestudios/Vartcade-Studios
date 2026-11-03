@@ -8,7 +8,7 @@ namespace TDTS.Data
 
     public enum SupplyKind { Food, Water, Medicine, Entertainment }
 
-    // Spec 2.1: 18 Morning fronts across 5 variants
+    // 20 Morning fronts: 4 of each variant
     public enum MorningActionType
     {
         SwapDeck,         // Swap your whole hand with any player
@@ -18,7 +18,7 @@ namespace TDTS.Data
         EveryoneSwitches  // Everyone passes their hand along the turn order
     }
 
-    // Spec 2.1: 18 Night backs, 3 variants x 6
+    // 20 Night backs: 8 Flashlight, 6 Targeted Night Skip, 6 Targeted Day Skip
     public enum NightActionType
     {
         Flashlight,        // One use: see the backs of every card in one hand, yours included

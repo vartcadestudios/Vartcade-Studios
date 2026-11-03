@@ -83,10 +83,18 @@ namespace TDTS.EditorTools
                 settings.morningFronts[i] = Mathf.Clamp(EditorGUILayout.IntField($"  {MorningNames[i]} (front)", settings.morningFronts[i]), 0, 20);
             for (int i = 0; i < NightNames.Length; i++)
                 settings.nightBacks[i] = Mathf.Clamp(EditorGUILayout.IntField($"  {NightNames[i]} (back)", settings.nightBacks[i]), 0, 20);
-            if (GUILayout.Button("Use 20 + 20 (8 Flashlight, 6/6 Skips, 4 of each Morning card)"))
+            using (new EditorGUILayout.HorizontalScope())
             {
-                settings.morningFronts = new[] { 4, 4, 4, 4, 4 };
-                settings.nightBacks = new[] { 8, 6, 6 };
+                if (GUILayout.Button("Game deck: 20 + 20"))
+                {
+                    settings.morningFronts = new[] { 4, 4, 4, 4, 4 };
+                    settings.nightBacks = new[] { 8, 6, 6 };
+                }
+                if (GUILayout.Button("Old deck: 18 + 18"))
+                {
+                    settings.morningFronts = new[] { 4, 4, 4, 3, 3 };
+                    settings.nightBacks = new[] { 6, 6, 6 };
+                }
             }
         }
 

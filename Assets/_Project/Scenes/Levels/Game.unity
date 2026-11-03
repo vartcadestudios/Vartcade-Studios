@@ -7045,6 +7045,18 @@ MonoBehaviour:
   bunkerCapacity: 2
   players: []
   limitActions: 1
+  deckRecipe:
+    morningFronts:
+    - 4
+    - 4
+    - 4
+    - 4
+    - 4
+    nightBacks:
+    - 8
+    - 6
+    - 6
+    supplyBacks: 36
 --- !u!4 &1940532016
 Transform:
   m_ObjectHideFlags: 0
