@@ -29,12 +29,12 @@ namespace TDTS.Bots
                 if (card.peeked) Saw(card);
         }
 
-        /// <summary>Human-like bots lose track of cards that left their hand.</summary>
-        public void Forget(float chance, PlayerData me, System.Random rng)
+        /// <summary>Human-like bots lose track of cards that left their hand; forgetful ones of their own hand too.</summary>
+        public void Forget(float chance, PlayerData me, System.Random rng, bool ownHandToo = false)
         {
             if (chance <= 0f) return;
             foreach (CardData card in knownBacks.Keys.ToList())
-                if (!me.hand.Contains(card) && rng.NextDouble() < chance)
+                if ((ownHandToo || !me.hand.Contains(card)) && rng.NextDouble() < chance)
                     knownBacks.Remove(card);
         }
     }

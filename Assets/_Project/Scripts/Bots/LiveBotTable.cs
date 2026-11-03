@@ -23,5 +23,7 @@ namespace TDTS.Bots
         public int PeeksThisTurn => gm.PeeksThisTurn;
         public bool StoleOrSwappedThisTurn => gm.StoleOrSwappedThisTurn;
         public bool EyesClosed => gm.EyesClosed;
+        public int ConversionCost => 0; // conversion is only a Balance Simulator test so far
+        public int ConversionsLeft => 0;
     }
 }

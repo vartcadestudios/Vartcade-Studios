@@ -26,5 +26,10 @@ namespace TDTS.Bots
         int PeeksThisTurn { get; }
         bool StoleOrSwappedThisTurn { get; }
         bool EyesClosed { get; }
+
+        /// <summary>Test rule: cards given up for 1 real Supply (0 = conversion is off).</summary>
+        int ConversionCost { get; }
+        /// <summary>Real Supply cards still available to convert into.</summary>
+        int ConversionsLeft { get; }
     }
 }

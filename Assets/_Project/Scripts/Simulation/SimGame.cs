@@ -29,6 +29,8 @@ namespace TDTS.Simulation
         public int tradesOffered;
         public int tradesAccepted;
         public int stalledTurns; // turns that ended early because no move went through
+        public int conversions;  // test rule: cards converted into real Supply
+        public int forcedDraws;  // test rule: draws a draw rule made someone take
 
         public SimGameResult(int seatCount)
         {
@@ -41,7 +43,8 @@ namespace TDTS.Simulation
     /// A whole game of Ten Days to Sundown played by bots, with no scene, UI or waiting.
     /// The rules mirror GameManager (Day and Night turns, trades, peek/steal/swap with one
     /// Steal or Swap a night and a peek required, all action cards, the Rondo, Sundown seating),
-    /// plus the test switches in SimSettings. If you change a rule in GameManager, change it here too.
+    /// plus the test switches in SimSettings (draw rules, resource conversion, a stronger Rondo,
+    /// forgetful players). If you change a rule in GameManager, change it here too.
     /// </summary>
     public class SimGame : IBotTable
     {
@@ -60,6 +63,7 @@ namespace TDTS.Simulation
         private GameState state = GameState.Init;
         private DayRule dayRule = DayRule.Normal;
         private int currentDay = 1;
+        private int conversionsLeft;
         private int sundownDay = 10;
         private int turnDirection = 1;
         private int activeIndex;
@@ -72,6 +76,7 @@ namespace TDTS.Simulation
         {
             this.settings = settings;
             rng = new Random(seed);
+            conversionsLeft = settings.conversionSupply;
             result = new SimGameResult(settings.seats.Length);
         }
 
@@ -89,6 +94,8 @@ namespace TDTS.Simulation
         public int PeeksThisTurn => peeksThisTurn;
         public bool StoleOrSwappedThisTurn => stoleOrSwapped;
         public bool EyesClosed => state == GameState.NightPhase || (state == GameState.DayPhase && dayRule == DayRule.Blackout);
+        public int ConversionCost => settings.conversionCost;
+        public int ConversionsLeft => conversionsLeft;
 
         // ---------- Running a game ----------
 
@@ -101,7 +108,7 @@ namespace TDTS.Simulation
                 state = GameState.DayPhase;
                 dayRule = DayRule.Normal;
                 foreach (var pair in brains) pair.Value.OnNewDay(pair.Key);
-                if (settings.rondo && currentDay >= GameManager.RondoStartDay) SpinRondo();
+                if (settings.rondo && currentDay >= (settings.strongRondo ? 4 : GameManager.RondoStartDay)) SpinRondo();
                 PlayPhase();
 
                 state = GameState.NightPhase;
@@ -140,7 +147,8 @@ namespace TDTS.Simulation
                 var p = new PlayerData($"{settings.seats[seat]} {seat + 1}");
                 players.Add(p);
                 seatOf[p] = seat;
-                brains[p] = new BotBrain(BotProfile.For(settings.seats[seat]), rng);
+                BotProfile profile = BotProfile.For(settings.seats[seat]);
+                brains[p] = new BotBrain(settings.forgetfulPlayers ? profile.Forgetful() : profile, rng);
             }
 
             DeckBuilder.Shuffle(players, rng);
@@ -190,7 +198,21 @@ namespace TDTS.Simulation
             }
 
             actionsLeft = isDay ? settings.dayActions : settings.nightActions;
-            if (isDay && settings.alwaysDraw && deck.Count > 0) GiveCard(p, TakeTopCard());
+            if (isDay && deck.Count > 0)
+            {
+                bool forced = (settings.drawRule == DrawRule.ForcedWhenLow && p.hand.Count < 3)
+                           || (settings.drawRule == DrawRule.ForcedEvenDays && currentDay % 2 == 0);
+                if (settings.drawRule == DrawRule.FreeEachDay)
+                {
+                    GiveCard(p, TakeTopCard());
+                }
+                else if (forced)
+                {
+                    GiveCard(p, TakeTopCard());
+                    result.forcedDraws++;
+                    SpendAction();
+                }
+            }
 
             // A guard against a turn that never ends; a real one ends in a handful of moves
             for (int attempt = 0; actionsLeft > 0 && attempt < 40; attempt++)
@@ -236,7 +258,8 @@ namespace TDTS.Simulation
             if (state == GameState.DayPhase)
             {
                 bool cardsAllowed = dayRule != DayRule.TradingOnly;
-                return (cardsAllowed && deck.Count > 0)
+                return (cardsAllowed && deck.Count > 0 && settings.drawRule != DrawRule.NoDrawing)
+                    || (cardsAllowed && settings.conversionCost > 0 && conversionsLeft > 0 && player.hand.Count >= settings.conversionCost)
                     || (player.hand.Count > 0 && othersHaveCards)
                     || (cardsAllowed && player.hand.Any(c => c.HasMorningFront));
             }
@@ -257,7 +280,7 @@ namespace TDTS.Simulation
             switch (m.kind)
             {
                 case MoveKind.Scavenge:
-                    if (!isDay || dayRule == DayRule.TradingOnly || deck.Count == 0) return false;
+                    if (!isDay || dayRule == DayRule.TradingOnly || deck.Count == 0 || settings.drawRule == DrawRule.NoDrawing) return false;
                     GiveCard(p, TakeTopCard());
                     SpendAction();
                     return true;
@@ -286,6 +309,9 @@ namespace TDTS.Simulation
                     stoleOrSwapped = true;
                     SpendAction();
                     return true;
+
+                case MoveKind.Convert:
+                    return isDay && Convert(p, m.handIndices);
 
                 case MoveKind.Swap:
                     if (!isNight || stoleOrSwapped || m.target == null || m.target == p || m.target.hand.Count == 0 || !ValidIndex(p, m.handIndex)) return false;
@@ -324,6 +350,32 @@ namespace TDTS.Simulation
             GiveCard(to, offered);
             GiveCard(from, wanted);
             result.tradesAccepted++;
+            SpendAction();
+            return true;
+        }
+
+        /// <summary>Test rule: give up conversionCost cards of your choice for 1 real Supply (which you know is real).</summary>
+        private bool Convert(PlayerData p, int[] handIndices)
+        {
+            int cost = settings.conversionCost;
+            if (dayRule == DayRule.TradingOnly || cost <= 0 || conversionsLeft <= 0) return false;
+            if (handIndices == null || handIndices.Length != cost || handIndices.Distinct().Count() != cost) return false;
+            if (handIndices.Any(i => !ValidIndex(p, i))) return false;
+
+            foreach (int i in handIndices.OrderByDescending(i => i))
+            {
+                discardPile.Add(p.hand[i]);
+                p.hand.RemoveAt(i);
+            }
+
+            var kind = (SupplyKind)rng.Next(4);
+            var supply = new CardData { front = FrontType.Supply, frontSupply = kind, back = BackType.Supply, backSupply = kind };
+            GiveCard(p, supply);
+            supply.peeked = true;
+            brains[p].Memory.Saw(supply);
+
+            conversionsLeft--;
+            result.conversions++;
             SpendAction();
             return true;
         }
@@ -429,13 +481,15 @@ namespace TDTS.Simulation
             switch (spun)
             {
                 case RondoResult.Purge:
-                    for (int i = 0; i < GameManager.PurgeCount && deck.Count > 0; i++) removedFromGame.Add(TakeTopCard());
+                    int purge = settings.strongRondo ? 10 : GameManager.PurgeCount;
+                    for (int i = 0; i < purge && deck.Count > 0; i++) removedFromGame.Add(TakeTopCard());
                     break;
                 case RondoResult.TradingOnly:
                     dayRule = DayRule.TradingOnly;
                     break;
                 case RondoResult.HungerDisaster:
-                    LoseOneCardEach(c => c.IsRealSupply && c.backSupply == SupplyKind.Food);
+                    for (int round = settings.strongRondo ? 2 : 1; round > 0; round--)
+                        LoseOneCardEach(c => c.IsRealSupply && c.backSupply == SupplyKind.Food);
                     break;
                 case RondoResult.Tornado:
                     var pool = players.SelectMany(p => p.hand).ToList();
@@ -449,14 +503,15 @@ namespace TDTS.Simulation
                     }
                     break;
                 case RondoResult.DoomsdayClock:
-                    sundownDay = Math.Max(currentDay, sundownDay - 1);
+                    sundownDay = Math.Max(currentDay, sundownDay - (settings.strongRondo ? 2 : 1));
                     break;
                 case RondoResult.Blackout:
                     dayRule = DayRule.Blackout;
                     break;
                 case RondoResult.Outbreak:
-                    LoseOneCardEach(c => c.IsRealSupply &&
-                        (c.backSupply == SupplyKind.Medicine || c.backSupply == SupplyKind.Entertainment));
+                    for (int round = settings.strongRondo ? 2 : 1; round > 0; round--)
+                        LoseOneCardEach(c => c.IsRealSupply &&
+                            (c.backSupply == SupplyKind.Medicine || c.backSupply == SupplyKind.Entertainment));
                     break;
             }
         }

@@ -50,8 +50,13 @@ namespace TDTS.Bots
 
         // ---------- What a card is worth ----------
 
-        private bool KnowsBack(CardData card, PlayerData me) =>
-            (card.peeked && me.hand.Contains(card)) || Memory.Knows(card);
+        private bool KnowsBack(CardData card, PlayerData me)
+        {
+            bool mine = me.hand.Contains(card);
+            if (!mine && !Profile.trackOthers) return false; // casual players don't follow other hands
+            if (mine && card.peeked && Profile.trackOwnPeeks) return true;
+            return Memory.Knows(card);
+        }
 
         private int KnownSupply(PlayerData me) => me.hand.Count(c => c.IsRealSupply && KnowsBack(c, me));
 
@@ -86,7 +91,7 @@ namespace TDTS.Bots
         /// <summary>Every move it could make right now, best first. The caller tries them in order.</summary>
         public List<BotMove> RankMoves(IBotTable table, PlayerData me)
         {
-            Memory.RememberOwnHand(me);
+            if (Profile.trackOwnPeeks) Memory.RememberOwnHand(me);
 
             var moves = new List<BotMove>();
             if (table.State == GameState.DayPhase) AddDayMoves(table, me, moves);
@@ -149,6 +154,21 @@ namespace TDTS.Bots
 
             // Morning cards: only worth playing when the effect beats what the card itself might be
             if (tradingOnly) return;
+
+            // Convert (test rule): give up its least useful cards for 1 real Supply
+            int convertCost = table.ConversionCost;
+            if (convertCost > 0 && table.ConversionsLeft > 0 && me.hand.Count >= convertCost)
+            {
+                int[] worst = Enumerable.Range(0, me.hand.Count).OrderBy(i => ValueOf(me.hand[i], me)).Take(convertCost).ToArray();
+                float giving = worst.Sum(i => ValueOf(me.hand[i], me));
+                float getting = need > 0 ? NeededSupplyValue : ExtraSupplyValue;
+                moves.Add(new BotMove
+                {
+                    kind = MoveKind.Convert, handIndices = worst,
+                    score = getting - giving + need * 0.3f - 0.3f,
+                    reason = $"convert {convertCost} cards it doesn't need into 1 real Supply",
+                });
+            }
             for (int i = 0; i < me.hand.Count; i++)
             {
                 CardData card = me.hand[i];
@@ -311,7 +331,7 @@ namespace TDTS.Bots
         /// <summary>Accept when what it gets is worth more to it than what it gives.</summary>
         public bool WantsTrade(PlayerData me, CardData offered, CardData wanted)
         {
-            Memory.RememberOwnHand(me);
+            if (Profile.trackOwnPeeks) Memory.RememberOwnHand(me);
             if (Profile.strategy == BotStrategy.Random) return rng.NextDouble() < 0.5;
 
             float gain = ValueOf(offered, me) - ValueOf(wanted, me);
@@ -320,7 +340,7 @@ namespace TDTS.Bots
         }
 
         /// <summary>Called at the start of each Day.</summary>
-        public void OnNewDay(PlayerData me) => Memory.Forget(Profile.forgetChance, me, rng);
+        public void OnNewDay(PlayerData me) => Memory.Forget(Profile.forgetChance, me, rng, !Profile.trackOwnPeeks);
 
         // ---------- Helpers ----------
 

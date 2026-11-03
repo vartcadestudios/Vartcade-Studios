@@ -143,6 +143,7 @@ namespace TDTS.Managers
             MoveKind.Peek => gm.PeekCard(bot, move.handIndex),
             MoveKind.Steal => gm.StealFrom(bot, move.target, move.targetCardIndex),
             MoveKind.Swap => gm.SwapWith(bot, move.handIndex, move.target),
+            MoveKind.Convert => false, // conversion is only a Balance Simulator test so far
             _ => gm.PassTurn(bot),
         };
 

@@ -35,6 +35,12 @@ namespace TDTS.Bots
         [Tooltip("Chance each Day of forgetting something it saw about a card that isn't in its hand.")]
         [Range(0f, 1f)] public float forgetChance = 0.1f;
 
+        [Tooltip("Always knows the backs of the cards in its hand it has peeked at.")]
+        public bool trackOwnPeeks = true;
+
+        [Tooltip("Keeps track of cards it has seen after they move to other players.")]
+        public bool trackOthers = true;
+
         public static BotProfile For(BotStrategy strategy) => strategy switch
         {
             BotStrategy.Random => new BotProfile
@@ -56,5 +62,19 @@ namespace TDTS.Bots
         };
 
         public string Label => strategy == BotStrategy.HumanLike ? "Human-like" : strategy.ToString();
+
+        /// <summary>
+        /// The same strategy played by a casual player: it doesn't follow cards once they leave its hand,
+        /// forgets what it peeked (its own hand too) about a third of the time each Day, and misjudges more.
+        /// </summary>
+        public BotProfile Forgetful()
+        {
+            var copy = (BotProfile)MemberwiseClone();
+            copy.trackOwnPeeks = false;
+            copy.trackOthers = false;
+            copy.forgetChance = System.Math.Max(forgetChance, 0.35f);
+            if (strategy != BotStrategy.Random) copy.noise = System.Math.Max(noise, 1f);
+            return copy;
+        }
     }
 }

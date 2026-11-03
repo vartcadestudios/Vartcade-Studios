@@ -88,9 +88,31 @@ namespace TDTS.EditorTools
 
             settings.allCardsVisible = EditorGUILayout.Toggle(
                 new GUIContent("All cards visible", "Every bot knows every back, as if nothing were hidden."), settings.allCardsVisible);
-            settings.alwaysDraw = EditorGUILayout.Toggle(
-                new GUIContent("Always draw a card", "Each player gets a free card at the start of every Day turn."), settings.alwaysDraw);
-            settings.rondo = EditorGUILayout.Toggle(new GUIContent("Rondo from Day 6"), settings.rondo);
+            settings.forgetfulPlayers = EditorGUILayout.Toggle(
+                new GUIContent("Forgetful players", "Casual players: nobody follows cards once they leave their hand, and everyone " +
+                                                    "forgets what they peeked (their own hand too) about a third of the time each Day."),
+                settings.forgetfulPlayers);
+
+            settings.drawRule = (DrawRule)EditorGUILayout.EnumPopup(
+                new GUIContent("Draw rule", "Choice: Scavenge is a normal Day action. FreeEachDay: a free card every Day turn. " +
+                                            "NoDrawing: no Scavenge at all. ForcedWhenLow: under 3 cards, your Day turn starts with a draw " +
+                                            "that uses an action. ForcedEvenDays: the same on Days 2, 4, 6, 8 and 10."),
+                settings.drawRule);
+
+            settings.conversionCost = EditorGUILayout.IntSlider(
+                new GUIContent("Convert cards for Supply", "Day action: give up this many cards for 1 real Supply. 0 = off."),
+                settings.conversionCost, 0, 4);
+            if (settings.conversionCost > 0)
+                settings.conversionSupply = EditorGUILayout.IntSlider(
+                    new GUIContent("  Supply available to convert", "How many real Supply cards can be converted into in one game."),
+                    settings.conversionSupply, 1, 30);
+
+            settings.rondo = EditorGUILayout.Toggle(new GUIContent("Rondo"), settings.rondo);
+            if (settings.rondo)
+                settings.strongRondo = EditorGUILayout.Toggle(
+                    new GUIContent("  Stronger Rondo", "Starts on Day 4. Purge takes 10 cards, Hunger and Outbreak take 2 cards each, " +
+                                                       "Doomsday Clock takes 2 days."),
+                    settings.strongRondo);
         }
 
         private void DrawRun()
@@ -115,7 +137,7 @@ namespace TDTS.EditorTools
             if (running && GUILayout.Button("Stop")) Stop();
         }
 
-        private static readonly string[] Tabs = { "Overview", "Strategies", "Supply", "Moves", "Cards", "Rondo" };
+        private static readonly string[] Tabs = { "Overview", "Strategies", "Supply", "Moves", "Cards", "Rondo", "Turn order" };
 
         private void DrawResults()
         {
@@ -159,6 +181,10 @@ namespace TDTS.EditorTools
                 case 5:
                     Explain("Rondo results from Day 6, most deadly first. Compare 'survivors per game' with the Overview average.");
                     DrawTable(SimStats.RondoHeader, stats.RondoRows(), 140);
+                    break;
+                case 6:
+                    Explain("Survival by seat in the starting turn order. In a fair game every position is close to the fair share.");
+                    DrawTable(SimStats.PositionHeader, stats.PositionRows(), 160);
                     break;
             }
         }

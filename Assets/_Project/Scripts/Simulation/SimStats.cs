@@ -59,6 +59,10 @@ namespace TDTS.Simulation
         public int tradesAccepted;
         public int stalledTurns;
         public int shortenedGames; // Doomsday Clock brought Sundown forward
+        public int conversions;
+        public int forcedDraws;
+        public readonly int[] positionSeats = new int[6];    // by starting turn position
+        public readonly int[] positionSurvived = new int[6];
         public double seconds;
 
         public readonly Dictionary<BotStrategy, StrategyRow> strategies = new Dictionary<BotStrategy, StrategyRow>();
@@ -80,6 +84,8 @@ namespace TDTS.Simulation
             tradesOffered += game.tradesOffered;
             tradesAccepted += game.tradesAccepted;
             stalledTurns += game.stalledTurns;
+            conversions += game.conversions;
+            forcedDraws += game.forcedDraws;
             if (game.sundownDay < 10) shortenedGames++;
 
             int alive = game.seats.Count(s => s.survived);
@@ -95,6 +101,8 @@ namespace TDTS.Simulation
 
                 row.seats++;
                 row.totalRealSupply += s.realSupply;
+                positionSeats[s.turnPosition]++;
+                if (s.survived) positionSurvived[s.turnPosition]++;
                 row.supplyHistogram[Math.Min(5, s.realSupply)]++;
                 if (s.survived)
                 {
@@ -151,7 +159,7 @@ namespace TDTS.Simulation
         }
 
         public static readonly MoveKind[] MoveColumns =
-            { MoveKind.Scavenge, MoveKind.Trade, MoveKind.PlayCard, MoveKind.Peek, MoveKind.Steal, MoveKind.Swap };
+            { MoveKind.Scavenge, MoveKind.Trade, MoveKind.PlayCard, MoveKind.Peek, MoveKind.Steal, MoveKind.Swap, MoveKind.Convert };
 
         // ---------- Tables (shared by the window and the CSV export) ----------
 
@@ -161,8 +169,10 @@ namespace TDTS.Simulation
         {
             new[] { "Games played", $"{games}" },
             new[] { "Players per game", $"{players}" },
-            new[] { "Rules", $"{s.dayActions} Day / {s.nightActions} Night actions, {s.supplyBacks} Supply / {SimSettings.NonNightBacks - s.supplyBacks} Trash backs" +
-                             $"{(s.allCardsVisible ? ", all cards visible" : "")}{(s.alwaysDraw ? ", free draw each Day" : "")}{(s.rondo ? "" : ", no Rondo")}" },
+            new[] { "Rules", $"{s.dayActions} Day / {s.nightActions} Night actions, {s.supplyBacks} Supply / {SimSettings.NonNightBacks - s.supplyBacks} Trash backs, " +
+                             $"draw rule {s.drawRule}{(s.conversionCost > 0 ? $", convert {s.conversionCost} cards for 1 Supply" : "")}" +
+                             $"{(s.allCardsVisible ? ", all cards visible" : "")}{(!s.rondo ? ", no Rondo" : s.strongRondo ? ", strong Rondo" : "")}" +
+                             $"{(s.forgetfulPlayers ? ", forgetful players" : "")}" },
             new[] { "Survivors per game", $"{AvgSurvivors:0.00} of 2 seats" },
             new[] { "Fair share per player", Pct(FairShare) },
             new[] { "Games where nobody survived", Pct(gamesNobodySurvived, games) },
@@ -170,6 +180,9 @@ namespace TDTS.Simulation
             new[] { "Sundown came early (Doomsday Clock)", Pct(shortenedGames, games) },
             new[] { "Trades offered per game", $"{(games == 0 ? 0 : (float)tradesOffered / games):0.0}" },
             new[] { "Trades accepted", Pct(tradesAccepted, tradesOffered) },
+            new[] { "Conversions per game", $"{(games == 0 ? 0 : (float)conversions / games):0.0}" },
+            new[] { "Forced draws per game", $"{(games == 0 ? 0 : (float)forcedDraws / games):0.0}" },
+            new[] { "First vs last player survival", $"{Pct(PositionRate(0))} vs {Pct(PositionRate(players - 1))}" },
             new[] { "Turns that ended early (no move worked)", $"{stalledTurns}" },
             new[] { "Time", $"{seconds:0.0}s" },
         };
@@ -197,7 +210,7 @@ namespace TDTS.Simulation
             return cells.ToArray();
         }).ToList();
 
-        public static readonly string[] MovesHeader = { "Strategy", "Scavenge", "Trade", "Play card", "Peek", "Steal", "Swap" };
+        public static readonly string[] MovesHeader = { "Strategy", "Scavenge", "Trade", "Play card", "Peek", "Steal", "Swap", "Convert" };
 
         public List<string[]> MoveRows() => StrategiesBestFirst.Select(r =>
         {
@@ -214,6 +227,18 @@ namespace TDTS.Simulation
             $"{r.plays}", $"{(games == 0 ? 0 : (float)r.plays / games):0.00}",
             Pct(r.gamesUsed, games, false), Pct(r.WinRateWhenPlayed),
             BotProfile.For(r.TopUser).Label,
+        }).ToList();
+
+        public float PositionRate(int position) =>
+            position < 0 || position >= positionSeats.Length || positionSeats[position] == 0 ? 0f : (float)positionSurvived[position] / positionSeats[position];
+
+        public static readonly string[] PositionHeader = { "Turn position", "Survived", "vs fair share" };
+
+        public List<string[]> PositionRows() => Enumerable.Range(0, players).Select(i => new[]
+        {
+            i == 0 ? "1st (starts each phase)" : i == players - 1 ? $"{i + 1}th (last)" : $"{i + 1}{(i == 1 ? "nd" : i == 2 ? "rd" : "th")}",
+            Pct(positionSurvived[i], positionSeats[i]),
+            $"{(PositionRate(i) - FairShare) * 100f:+0.0;-0.0} pts",
         }).ToList();
 
         public static readonly string[] RondoHeader = { "Rondo result", "Came up in % of games", "Survivors per game when it did" };
@@ -251,6 +276,7 @@ namespace TDTS.Simulation
             Section("Moves per game (one seat)", MovesHeader, MoveRows());
             Section("Action cards", CardHeader, CardRows());
             Section("Rondo", RondoHeader, RondoRows());
+            Section("Survival by turn position", PositionHeader, PositionRows());
             return sb.ToString();
         }
 
