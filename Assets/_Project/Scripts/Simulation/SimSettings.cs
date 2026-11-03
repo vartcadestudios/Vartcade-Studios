@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using TDTS.Bots;
 using TDTS.Data;
 
@@ -31,7 +32,12 @@ namespace TDTS.Simulation
         public int dayActions = 1;
         public int nightActions = 2;
 
-        // Of the 54 cards without a Night back, how many have a real Supply back (the rest are Trash)
+        // Action cards in the 72: Morning fronts per type (Swap Deck, Reverse Turn, Skip Next Player,
+        // Everyone +1 Card, Everyone Switches) and Night backs per type (Flashlight, Targeted Night Skip, Targeted Day Skip)
+        public int[] morningFronts = { 4, 4, 4, 3, 3 };
+        public int[] nightBacks = { 6, 6, 6 };
+
+        // Of the cards without a Night back, how many have a real Supply back (the rest are Trash)
         public int supplyBacks = 36;
 
         public bool allCardsVisible = false; // every bot knows every back
@@ -53,8 +59,14 @@ namespace TDTS.Simulation
         public bool rondo = true;         // Rondo events from Day 6
         public bool strongRondo = false;  // from Day 4, Purge 10, Hunger/Outbreak take 2, Doomsday takes 2 days
 
-        public const int NonNightBacks = DeckRecipe.CardCount - 18;
+        /// <summary>Backs left for Supply and Trash once the Night backs are placed.</summary>
+        public int NonNightBacks => DeckRecipe.CardCount - nightBacks.Sum();
 
-        public DeckRecipe BuildRecipe() => new DeckRecipe { supplyBacks = supplyBacks };
+        public DeckRecipe BuildRecipe() => new DeckRecipe
+        {
+            morningFronts = (int[])morningFronts.Clone(),
+            nightBacks = (int[])nightBacks.Clone(),
+            supplyBacks = Math.Min(supplyBacks, NonNightBacks),
+        };
     }
 }

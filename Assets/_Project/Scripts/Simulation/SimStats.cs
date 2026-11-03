@@ -201,7 +201,8 @@ namespace TDTS.Simulation
         {
             new[] { "Games played", $"{games}" },
             new[] { "Players per game", $"{players}" },
-            new[] { "Rules", $"{s.dayActions} Day / {s.nightActions} Night actions, {s.supplyBacks} Supply / {SimSettings.NonNightBacks - s.supplyBacks} Trash backs, " +
+            new[] { "Rules", $"{s.dayActions} Day / {s.nightActions} Night actions, {s.supplyBacks} Supply / {s.NonNightBacks - s.supplyBacks} Trash backs, " +
+                             $"{s.morningFronts.Sum()} Morning fronts ({string.Join("/", s.morningFronts)}), {s.nightBacks.Sum()} Night backs ({string.Join("/", s.nightBacks)}), " +
                              $"draw rule {s.drawRule}{(s.conversionCost > 0 ? $", convert {s.conversionCost} cards for 1 Supply" : "")}" +
                              $"{(s.allCardsVisible ? ", all cards visible" : "")}{(!s.rondo ? ", no Rondo" : s.strongRondo ? ", strong Rondo" : "")}" +
                              $"{(s.forgetfulPlayers ? ", forgetful players" : "")}" },

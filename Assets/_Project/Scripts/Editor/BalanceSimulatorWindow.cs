@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using TDTS.Bots;
@@ -71,8 +72,27 @@ namespace TDTS.EditorTools
                 settings.seats[i] = (BotStrategy)EditorGUILayout.EnumPopup($"Seat {i + 1} strategy", settings.seats[i]);
         }
 
+        private static readonly string[] MorningNames = { "Swap Deck", "Reverse Turn", "Skip Next Player", "Everyone +1 Card", "Everyone Switches" };
+        private static readonly string[] NightNames = { "Flashlight", "Targeted Night Skip", "Targeted Day Skip" };
+
+        private void DrawDeck()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField($"Action cards ({settings.morningFronts.Sum()} Morning fronts, {settings.nightBacks.Sum()} Night backs)", EditorStyles.boldLabel);
+            for (int i = 0; i < MorningNames.Length; i++)
+                settings.morningFronts[i] = Mathf.Clamp(EditorGUILayout.IntField($"  {MorningNames[i]} (front)", settings.morningFronts[i]), 0, 20);
+            for (int i = 0; i < NightNames.Length; i++)
+                settings.nightBacks[i] = Mathf.Clamp(EditorGUILayout.IntField($"  {NightNames[i]} (back)", settings.nightBacks[i]), 0, 20);
+            if (GUILayout.Button("Use 20 + 20 (8 Flashlight, 6/6 Skips, 4 of each Morning card)"))
+            {
+                settings.morningFronts = new[] { 4, 4, 4, 4, 4 };
+                settings.nightBacks = new[] { 8, 6, 6 };
+            }
+        }
+
         private void DrawRules()
         {
+            DrawDeck();
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Rules to test", EditorStyles.boldLabel);
 
@@ -80,10 +100,10 @@ namespace TDTS.EditorTools
             settings.nightActions = EditorGUILayout.IntSlider("Actions per Night turn", settings.nightActions, 1, 4);
 
             settings.supplyBacks = EditorGUILayout.IntSlider(
-                new GUIContent("Real Supply backs", $"Of the {SimSettings.NonNightBacks} cards without a Night back. The rest are Trash."),
-                settings.supplyBacks, 0, SimSettings.NonNightBacks);
-            int trash = SimSettings.NonNightBacks - settings.supplyBacks;
-            EditorGUILayout.LabelField(" ", $"{settings.supplyBacks} real Supply, {trash} Trash ({100f * settings.supplyBacks / SimSettings.NonNightBacks:0}% real)",
+                new GUIContent("Real Supply backs", $"Of the {settings.NonNightBacks} cards without a Night back. The rest are Trash."),
+                Mathf.Min(settings.supplyBacks, settings.NonNightBacks), 0, settings.NonNightBacks);
+            int trash = settings.NonNightBacks - settings.supplyBacks;
+            EditorGUILayout.LabelField(" ", $"{settings.supplyBacks} real Supply, {trash} Trash ({100f * settings.supplyBacks / Mathf.Max(1, settings.NonNightBacks):0}% real)",
                 EditorStyles.miniLabel);
 
             settings.allCardsVisible = EditorGUILayout.Toggle(
