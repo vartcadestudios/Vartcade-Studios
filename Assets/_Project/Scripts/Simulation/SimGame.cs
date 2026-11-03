@@ -15,6 +15,7 @@ namespace TDTS.Simulation
         public bool heldKey;
         public int realSupply;
         public string reason;
+        public int turnPosition; // 0 = first in the starting turn order
     }
 
     /// <summary>Everything recorded about one simulated game.</summary>
@@ -125,6 +126,7 @@ namespace TDTS.Simulation
                     heldKey = p.HoldsKey,
                     realSupply = p.RealSupplyCount,
                     reason = p.resultReason,
+                    turnPosition = players.IndexOf(p),
                 };
             }
             return result;
