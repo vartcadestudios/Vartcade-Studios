@@ -27,6 +27,12 @@ namespace TDTS.Bots
         bool StoleOrSwappedThisTurn { get; }
         bool EyesClosed { get; }
 
+        /// <summary>R4: a peek is required every Night (a test switch can turn it off).</summary>
+        bool PeekRequired { get; }
+
+        /// <summary>True when qualifying needs 3 different Supply kinds rather than any 3 real Supply.</summary>
+        bool NeedDifferentKinds { get; }
+
         /// <summary>Test rule: cards given up for 1 real Supply (0 = conversion is off).</summary>
         int ConversionCost { get; }
         /// <summary>Real Supply cards still available to convert into.</summary>

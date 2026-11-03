@@ -16,6 +16,22 @@ namespace TDTS.Simulation
         public int realSupply;
         public string reason;
         public int turnPosition; // 0 = first in the starting turn order
+
+        // Moments players tend to find frustrating
+        public int timesStolenFrom;   // someone took one of your cards with Steal
+        public int supplyTaken;       // real Supply you lost to someone else's Steal or Swap
+        public int keyTaken;          // the Key left your hand because of someone else (or an event)
+        public int handScrambled;     // you lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado
+        public int rondoSupplyLost;   // real Supply a Rondo event took out of your hand
+        public int turnsSkipped;      // whole turns lost to a Skip card
+        public int turnsWithNoMove;   // turns that ended with actions unused: nothing possible or nothing worked
+        public int tradesRefused;     // your trade offers that were turned down
+        public int peeksLost;         // cards you had peeked that someone else took or scrambled away
+        public bool hopelessLastDay;  // went into the last Day with 0-1 real Supply and no Key
+        public bool collapsedAtEnd;   // went into the last Day able to survive, then didn't
+        public bool lostWith3Plus;    // had 3+ real Supply but lost a tie or found the bunker full
+        public int actions;           // actions you took
+        public int othersActions;     // actions everyone else took: time spent waiting
     }
 
     /// <summary>Everything recorded about one simulated game.</summary>
@@ -58,6 +74,7 @@ namespace TDTS.Simulation
         private readonly List<CardData> removedFromGame = new List<CardData>();
         private readonly List<RondoResult> rondoUsed = new List<RondoResult>();
         private readonly HashSet<PlayerData> hadTurn = new HashSet<PlayerData>();
+        private readonly HashSet<PlayerData> stolenFromTonight = new HashSet<PlayerData>();
         private readonly SimGameResult result;
 
         private GameState state = GameState.Init;
@@ -71,6 +88,10 @@ namespace TDTS.Simulation
         private int peeksThisTurn;
         private bool stoleOrSwapped;
         private CardData stolenThisTurn;
+
+        // Frustration tracking
+        private PlayerData keyHolder;
+        private Dictionary<PlayerData, (int supply, bool key)> lastDayStart;
 
         public SimGame(SimSettings settings, int seed)
         {
@@ -96,6 +117,12 @@ namespace TDTS.Simulation
         public bool EyesClosed => state == GameState.NightPhase || (state == GameState.DayPhase && dayRule == DayRule.Blackout);
         public int ConversionCost => settings.conversionCost;
         public int ConversionsLeft => conversionsLeft;
+        public bool PeekRequired => settings.peekRequired;
+        public bool NeedDifferentKinds => settings.differentKinds;
+
+        /// <summary>What counts toward the 3 needed: different kinds, or any real Supply under the old reading.</summary>
+        private int Qualifying(PlayerData p) => settings.differentKinds ? p.SupplyKinds : p.RealSupplyCount;
+        private int Rank(PlayerData p) => settings.differentKinds ? p.SupplyRank : p.RealSupplyCount;
 
         // ---------- Running a game ----------
 
@@ -109,6 +136,9 @@ namespace TDTS.Simulation
                 dayRule = DayRule.Normal;
                 foreach (var pair in brains) pair.Value.OnNewDay(pair.Key);
                 if (settings.rondo && currentDay >= (settings.strongRondo ? 4 : GameManager.RondoStartDay)) SpinRondo();
+                TrackKey(null);
+                if (currentDay >= sundownDay && lastDayStart == null)
+                    lastDayStart = players.ToDictionary(p => p, p => (Qualifying(p), p.HoldsKey));
                 PlayPhase();
 
                 state = GameState.NightPhase;
@@ -122,19 +152,20 @@ namespace TDTS.Simulation
             DecideSurvivors();
 
             result.sundownDay = sundownDay;
-            for (int i = 0; i < players.Count; i++) result.seats.Add(null); // filled in seat order below
             foreach (PlayerData p in players)
             {
-                int seat = seatOf[p];
-                result.seats[seat] = new SeatResult
+                SeatResult r = F(p);
+                r.survived = p.isSeated;
+                r.heldKey = p.HoldsKey;
+                r.realSupply = p.RealSupplyCount;
+                r.reason = p.resultReason;
+                r.turnPosition = players.IndexOf(p);
+                r.lostWith3Plus = !p.isSeated && (p.resultReason == "tied for the last seat" || p.resultReason == "bunker full");
+                if (lastDayStart != null && lastDayStart.TryGetValue(p, out var start))
                 {
-                    strategy = settings.seats[seat],
-                    survived = p.isSeated,
-                    heldKey = p.HoldsKey,
-                    realSupply = p.RealSupplyCount,
-                    reason = p.resultReason,
-                    turnPosition = players.IndexOf(p),
-                };
+                    r.hopelessLastDay = start.supply <= 1 && !start.key;
+                    r.collapsedAtEnd = (start.supply >= GameManager.SupplyToSurvive || start.key) && !p.isSeated;
+                }
             }
             return result;
         }
@@ -147,6 +178,7 @@ namespace TDTS.Simulation
                 var p = new PlayerData($"{settings.seats[seat]} {seat + 1}");
                 players.Add(p);
                 seatOf[p] = seat;
+                result.seats.Add(new SeatResult { strategy = settings.seats[seat] });
                 BotProfile profile = BotProfile.For(settings.seats[seat]);
                 brains[p] = new BotBrain(settings.forgetfulPlayers ? profile.Forgetful() : profile, rng);
             }
@@ -162,6 +194,7 @@ namespace TDTS.Simulation
         private void PlayPhase()
         {
             hadTurn.Clear();
+            stolenFromTonight.Clear();
             activeIndex = turnDirection > 0 ? 0 : players.Count - 1;
 
             while (true)
@@ -194,6 +227,7 @@ namespace TDTS.Simulation
             {
                 if (isDay) p.daySkip = false;
                 else p.nightSkip = false;
+                F(p).turnsSkipped++;
                 return;
             }
 
@@ -210,6 +244,7 @@ namespace TDTS.Simulation
                 {
                     GiveCard(p, TakeTopCard());
                     result.forcedDraws++;
+                    CountAction(p);
                     SpendAction();
                 }
             }
@@ -217,7 +252,11 @@ namespace TDTS.Simulation
             // A guard against a turn that never ends; a real one ends in a handful of moves
             for (int attempt = 0; actionsLeft > 0 && attempt < 40; attempt++)
             {
-                if (!HasAnyMove(p)) return;
+                if (!HasAnyMove(p))
+                {
+                    F(p).turnsWithNoMove++;
+                    return;
+                }
                 if (settings.allCardsVisible) ShowEveryBack(brain);
 
                 bool acted = false;
@@ -227,12 +266,14 @@ namespace TDTS.Simulation
                     if (!TryMove(p, move)) continue;
 
                     Count(p, move.kind);
+                    TrackKey(p);
                     acted = true;
                     break;
                 }
                 if (!acted)
                 {
                     result.stalledTurns++;
+                    F(p).turnsWithNoMove++;
                     return;
                 }
             }
@@ -245,8 +286,42 @@ namespace TDTS.Simulation
                     brain.Memory.Saw(card);
         }
 
+        private SeatResult F(PlayerData p) => result.seats[seatOf[p]];
+
+        private void CountAction(PlayerData p)
+        {
+            F(p).actions++;
+            foreach (PlayerData other in players)
+                if (other != p) F(other).othersActions++;
+        }
+
+        /// <summary>Notes when the Key leaves someone's hand because of another player or an event.</summary>
+        private void TrackKey(PlayerData actor)
+        {
+            PlayerData holder = players.FirstOrDefault(x => x.HoldsKey);
+            if (keyHolder != null && holder != keyHolder && actor != keyHolder) F(keyHolder).keyTaken++;
+            keyHolder = holder;
+        }
+
+        /// <summary>Real Supply and peeked cards each player has, to compare after a scramble.</summary>
+        private Dictionary<PlayerData, (int supply, int peeked)> Snapshot() =>
+            players.ToDictionary(x => x, x => (x.RealSupplyCount, x.hand.Count(c => c.peeked)));
+
+        private void NoteScramble(Dictionary<PlayerData, (int supply, int peeked)> before, PlayerData playedBy, bool fromRondo)
+        {
+            foreach (PlayerData x in players)
+            {
+                if (x == playedBy) continue; // their own choice
+                int lost = before[x].supply - x.RealSupplyCount;
+                if (lost >= 2) F(x).handScrambled++;
+                if (fromRondo && lost > 0) F(x).rondoSupplyLost += lost;
+                F(x).peeksLost += before[x].peeked;
+            }
+        }
+
         private void Count(PlayerData p, MoveKind kind)
         {
+            CountAction(p);
             var moves = result.movesBySeat[seatOf[p]];
             moves[kind] = moves.TryGetValue(kind, out int n) ? n + 1 : 1;
         }
@@ -274,7 +349,7 @@ namespace TDTS.Simulation
             bool isNight = state == GameState.NightPhase;
 
             // R4: the last Night action must be a peek if there hasn't been one
-            bool mustPeek = isNight && actionsLeft == 1 && peeksThisTurn == 0 && p.hand.Count > 0;
+            bool mustPeek = settings.peekRequired && isNight && actionsLeft == 1 && peeksThisTurn == 0 && p.hand.Count > 0;
             if (mustPeek && m.kind != MoveKind.Peek) return false;
 
             switch (m.kind)
@@ -302,7 +377,12 @@ namespace TDTS.Simulation
 
                 case MoveKind.Steal:
                     if (!isNight || stoleOrSwapped || m.target == null || m.target == p || !ValidIndex(m.target, m.targetCardIndex)) return false;
+                    if (settings.stealProtection && stolenFromTonight.Contains(m.target)) return false;
+                    stolenFromTonight.Add(m.target);
                     CardData stolen = m.target.hand[m.targetCardIndex];
+                    F(m.target).timesStolenFrom++;
+                    if (stolen.IsRealSupply) F(m.target).supplyTaken++;
+                    if (stolen.peeked) F(m.target).peeksLost++;
                     m.target.hand.RemoveAt(m.targetCardIndex);
                     GiveCard(p, stolen);
                     stolenThisTurn = stolen;
@@ -318,6 +398,8 @@ namespace TDTS.Simulation
                     CardData mine = p.hand[m.handIndex];
                     p.hand.RemoveAt(m.handIndex);
                     CardData theirs = TakeRandomCard(m.target);
+                    if (theirs.IsRealSupply && !mine.IsRealSupply) F(m.target).supplyTaken++;
+                    if (theirs.peeked) F(m.target).peeksLost++;
                     GiveCard(p, theirs);
                     GiveCard(m.target, mine);
                     stoleOrSwapped = true;
@@ -342,6 +424,7 @@ namespace TDTS.Simulation
             if (!brains[to].WantsTrade(to, offered, wanted))
             {
                 brains[from].NoteTradeRefused(to);
+                F(from).tradesRefused++;
                 return false;
             }
 
@@ -413,9 +496,11 @@ namespace TDTS.Simulation
             switch (action)
             {
                 case MorningActionType.SwapDeck:
+                    var beforeSwap = Snapshot();
                     (player.hand, target.hand) = (target.hand, player.hand);
                     foreach (var c in player.hand) c.peeked = false;
                     foreach (var c in target.hand) c.peeked = false;
+                    NoteScramble(beforeSwap, player, false);
                     break;
 
                 case MorningActionType.ReverseTurn:
@@ -433,6 +518,7 @@ namespace TDTS.Simulation
                     break;
 
                 case MorningActionType.EveryoneSwitches:
+                    var beforeSwitch = Snapshot();
                     var hands = players.Select(p => p.hand).ToList();
                     for (int i = 0; i < players.Count; i++)
                     {
@@ -440,6 +526,7 @@ namespace TDTS.Simulation
                         players[to].hand = hands[i];
                         foreach (var c in hands[i]) c.peeked = false;
                     }
+                    NoteScramble(beforeSwitch, player, false);
                     break;
             }
         }
@@ -492,6 +579,7 @@ namespace TDTS.Simulation
                         LoseOneCardEach(c => c.IsRealSupply && c.backSupply == SupplyKind.Food);
                     break;
                 case RondoResult.Tornado:
+                    var beforeTornado = Snapshot();
                     var pool = players.SelectMany(p => p.hand).ToList();
                     var sizes = players.Select(p => p.hand.Count).ToList();
                     DeckBuilder.Shuffle(pool, rng);
@@ -501,6 +589,7 @@ namespace TDTS.Simulation
                         players[i].hand = new List<CardData>();
                         for (int n = 0; n < sizes[i]; n++) GiveCard(players[i], pool[next++]);
                     }
+                    NoteScramble(beforeTornado, null, true);
                     break;
                 case RondoResult.DoomsdayClock:
                     sundownDay = Math.Max(currentDay, sundownDay - (settings.strongRondo ? 2 : 1));
@@ -523,6 +612,8 @@ namespace TDTS.Simulation
                 var candidates = p.hand.Where(matches).ToList();
                 if (candidates.Count == 0) continue;
                 CardData card = candidates[rng.Next(candidates.Count)];
+                F(p).rondoSupplyLost++;
+                if (card.peeked) F(p).peeksLost++;
                 p.hand.Remove(card);
                 discardPile.Add(card);
             }
@@ -549,15 +640,15 @@ namespace TDTS.Simulation
             }
 
             var qualifiers = players
-                .Where(p => !p.isSeated && p.RealSupplyCount >= GameManager.SupplyToSurvive)
-                .OrderByDescending(p => p.RealSupplyCount)
+                .Where(p => !p.isSeated && Qualifying(p) >= GameManager.SupplyToSurvive)
+                .OrderByDescending(Rank)
                 .ToList();
 
             int index = 0;
             while (seatsLeft > 0 && index < qualifiers.Count)
             {
-                int supply = qualifiers[index].RealSupplyCount;
-                var tied = qualifiers.Skip(index).TakeWhile(p => p.RealSupplyCount == supply).ToList();
+                int supply = Rank(qualifiers[index]);
+                var tied = qualifiers.Skip(index).TakeWhile(p => Rank(p) == supply).ToList();
 
                 if (tied.Count <= seatsLeft)
                 {

@@ -61,6 +61,29 @@ namespace TDTS.Simulation
         public int shortenedGames; // Doomsday Clock brought Sundown forward
         public int conversions;
         public int forcedDraws;
+        // Frustration: per event, the total across every player and how many players it happened to at least once
+        public static readonly (string name, Func<SeatResult, double> count, string meaning)[] FrustrationEvents =
+        {
+            ("Had a card stolen", s => s.timesStolenFrom, "Someone took one of your cards with Steal"),
+            ("Lost real Supply to a Steal or Swap", s => s.supplyTaken, "A real Supply card left your hand because of another player"),
+            ("Lost the Key", s => s.keyTaken, "You were holding the Key and someone (or an event) took it"),
+            ("Hand scrambled", s => s.handScrambled, "You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"),
+            ("Real Supply lost to the Rondo", s => s.rondoSupplyLost, "Hunger, Outbreak or Tornado took real Supply from you"),
+            ("Peeked cards lost", s => s.peeksLost, "Cards you had looked at were taken or scrambled away"),
+            ("Turns lost to a Skip", s => s.turnsSkipped, "A whole turn gone because of a Skip card"),
+            ("Turns with nothing to do", s => s.turnsWithNoMove, "Your turn ended with actions left: no move was possible"),
+            ("Trades refused", s => s.tradesRefused, "Your trade offer was turned down"),
+            ("Hopeless last Day", s => s.hopelessLastDay ? 1 : 0, "You started the last Day with 0-1 real Supply and no Key"),
+            ("Collapsed at the end", s => s.collapsedAtEnd ? 1 : 0, "You started the last Day able to survive, then lost"),
+            ("Lost with 3+ Supply", s => s.lostWith3Plus ? 1 : 0, "You reached 3 real Supply and still lost (tie or bunker full)"),
+        };
+
+        public readonly double[] frustrationTotal = new double[FrustrationEvents.Length];
+        public readonly int[] frustrationPlayers = new int[FrustrationEvents.Length];
+        public int seatGames;
+        public long actionsTaken;
+        public long actionsWaited;
+
         public readonly int[] positionSeats = new int[6];    // by starting turn position
         public readonly int[] positionSurvived = new int[6];
         public double seconds;
@@ -101,6 +124,15 @@ namespace TDTS.Simulation
 
                 row.seats++;
                 row.totalRealSupply += s.realSupply;
+                seatGames++;
+                actionsTaken += s.actions;
+                actionsWaited += s.othersActions;
+                for (int e = 0; e < FrustrationEvents.Length; e++)
+                {
+                    double n = FrustrationEvents[e].count(s);
+                    frustrationTotal[e] += n;
+                    if (n > 0) frustrationPlayers[e]++;
+                }
                 positionSeats[s.turnPosition]++;
                 if (s.survived) positionSurvived[s.turnPosition]++;
                 row.supplyHistogram[Math.Min(5, s.realSupply)]++;
@@ -229,6 +261,27 @@ namespace TDTS.Simulation
             BotProfile.For(r.TopUser).Label,
         }).ToList();
 
+        public static readonly string[] FrustrationHeader = { "What happened", "Per player per game", "Players it happened to", "Meaning" };
+
+        public List<string[]> FrustrationRows()
+        {
+            var rows = new List<string[]>();
+            for (int e = 0; e < FrustrationEvents.Length; e++)
+            {
+                rows.Add(new[]
+                {
+                    FrustrationEvents[e].name,
+                    seatGames == 0 ? "-" : (frustrationTotal[e] / seatGames).ToString("0.00"),
+                    Pct(frustrationPlayers[e], seatGames, false),
+                    FrustrationEvents[e].meaning,
+                });
+            }
+            double ratio = actionsTaken == 0 ? 0 : (double)actionsWaited / actionsTaken;
+            rows.Add(new[] { "Waiting", $"{ratio:0.0} actions by others for each of yours", "-",
+                $"About {actionsWaited / Math.Max(1.0, seatGames) * 6 / 60:0.0} min of waiting per game at 6 s per action" });
+            return rows;
+        }
+
         public float PositionRate(int position) =>
             position < 0 || position >= positionSeats.Length || positionSeats[position] == 0 ? 0f : (float)positionSurvived[position] / positionSeats[position];
 
@@ -277,6 +330,7 @@ namespace TDTS.Simulation
             Section("Action cards", CardHeader, CardRows());
             Section("Rondo", RondoHeader, RondoRows());
             Section("Survival by turn position", PositionHeader, PositionRows());
+            Section("Frustrating moments", FrustrationHeader, FrustrationRows());
             return sb.ToString();
         }
 

@@ -107,6 +107,15 @@ namespace TDTS.EditorTools
                     new GUIContent("  Supply available to convert", "How many real Supply cards can be converted into in one game."),
                     settings.conversionSupply, 1, 30);
 
+            settings.peekRequired = EditorGUILayout.Toggle(
+                new GUIContent("Peek required each Night", "R4. With 1 Night action, the required peek uses the whole turn, " +
+                                                            "so nobody can Steal, Swap or play a Night card."),
+                settings.peekRequired);
+
+            settings.stealProtection = EditorGUILayout.Toggle(
+                new GUIContent("Steal protection", "Once you've been stolen from, nobody can steal from you again that Night."),
+                settings.stealProtection);
+
             settings.rondo = EditorGUILayout.Toggle(new GUIContent("Rondo"), settings.rondo);
             if (settings.rondo)
                 settings.strongRondo = EditorGUILayout.Toggle(
@@ -137,7 +146,7 @@ namespace TDTS.EditorTools
             if (running && GUILayout.Button("Stop")) Stop();
         }
 
-        private static readonly string[] Tabs = { "Overview", "Strategies", "Supply", "Moves", "Cards", "Rondo", "Turn order" };
+        private static readonly string[] Tabs = { "Overview", "Strategies", "Supply", "Moves", "Cards", "Rondo", "Turn order", "Frustration" };
 
         private void DrawResults()
         {
@@ -185,6 +194,11 @@ namespace TDTS.EditorTools
                 case 6:
                     Explain("Survival by seat in the starting turn order. In a fair game every position is close to the fair share.");
                     DrawTable(SimStats.PositionHeader, stats.PositionRows(), 160);
+                    break;
+                case 7:
+                    Explain("Moments players tend to find frustrating, per player per game, and the share of players it happened to " +
+                            "at least once. Lower is better; zero isn't the goal, since some setbacks make a comeback exciting.");
+                    DrawTable(SimStats.FrustrationHeader, stats.FrustrationRows(), 200);
                     break;
             }
         }

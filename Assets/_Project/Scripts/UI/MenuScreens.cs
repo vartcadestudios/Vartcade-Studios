@@ -27,7 +27,7 @@ namespace TDTS.UI
                 "The sun sets in <b>ten days</b>. When it does, the bunker has only <b>two seats</b>.\n\n" +
                 "Whoever holds the <color=#FAC775><b>Bunker Key</b></color> gets a seat, no matter what. " +
                 "It hides on the <b>back</b> of an ordinary Supply card, so you may not know who has it... even if it's you.\n\n" +
-                "The other seats go to players holding at least <b>3 real Supply</b> cards, most Supply first. " +
+                "The other seats go to players holding <b>3 different kinds</b> of real Supply (Food, Water, Medicine, Entertainment), most kinds first. " +
                 "Everyone else is left outside when the light goes."),
 
             ("Your cards", "Every card has two faces",

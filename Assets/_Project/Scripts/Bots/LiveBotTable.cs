@@ -25,5 +25,7 @@ namespace TDTS.Bots
         public bool EyesClosed => gm.EyesClosed;
         public int ConversionCost => 0; // conversion is only a Balance Simulator test so far
         public int ConversionsLeft => 0;
+        public bool PeekRequired => true;
+        public bool NeedDifferentKinds => true;
     }
 }

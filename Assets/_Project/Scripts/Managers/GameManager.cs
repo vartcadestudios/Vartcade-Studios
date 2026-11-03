@@ -40,7 +40,7 @@ namespace TDTS.Managers
         public const int StartingHandSize = 2;
         public const int MaxPlayers = 6;
         public const int RondoStartDay = 6;
-        public const int SupplyToSurvive = 3;
+        public const int SupplyToSurvive = 3; // different Supply kinds needed to qualify for a seat
         public const int PurgeCount = 5;
 
         [Header("Deck")]
@@ -1095,7 +1095,7 @@ namespace TDTS.Managers
             foreach (var p in players)
             {
                 p.isSeated = false;
-                p.resultReason = $"only {p.RealSupplyCount} real Supply";
+                p.resultReason = $"only {p.SupplyKinds} of the 3 Supply kinds needed";
             }
 
             int seatsLeft = bunkerCapacity;
@@ -1109,31 +1109,32 @@ namespace TDTS.Managers
                 seatsLeft--;
             }
 
-            // Everyone else needs 3+ real Supply; the most Supply wins the remaining seats
+            // Everyone else needs 3 different kinds of real Supply; more kinds, then more Supply, wins the remaining seats
             var qualifiers = players
-                .Where(p => !p.isSeated && p.RealSupplyCount >= SupplyToSurvive)
-                .OrderByDescending(p => p.RealSupplyCount)
+                .Where(p => !p.isSeated && p.SupplyKinds >= SupplyToSurvive)
+                .OrderByDescending(p => p.SupplyRank)
                 .ToList();
 
             int index = 0;
             while (seatsLeft > 0 && index < qualifiers.Count)
             {
-                int supply = qualifiers[index].RealSupplyCount;
-                var tied = qualifiers.Skip(index).TakeWhile(p => p.RealSupplyCount == supply).ToList();
+                int rank = qualifiers[index].SupplyRank;
+                string supply = $"{qualifiers[index].SupplyKinds} Supply kinds, {qualifiers[index].RealSupplyCount} real Supply";
+                var tied = qualifiers.Skip(index).TakeWhile(p => p.SupplyRank == rank).ToList();
 
                 if (tied.Count <= seatsLeft)
                 {
                     foreach (var p in tied)
                     {
                         p.isSeated = true;
-                        p.resultReason = $"{supply} real Supply";
+                        p.resultReason = supply;
                     }
                     seatsLeft -= tied.Count;
                 }
                 else
                 {
                     // R2: a tie for the last seat leaves it empty
-                    foreach (var p in tied) p.resultReason = $"{supply} real Supply, tied for the last seat";
+                    foreach (var p in tied) p.resultReason = $"{supply}, tied for the last seat";
                     break;
                 }
                 index += tied.Count;
@@ -1141,7 +1142,7 @@ namespace TDTS.Managers
 
             for (int i = index; i < qualifiers.Count; i++)
                 if (!qualifiers[i].isSeated && !qualifiers[i].resultReason.Contains("tied"))
-                    qualifiers[i].resultReason = $"{qualifiers[i].RealSupplyCount} real Supply, but the bunker was full";
+                    qualifiers[i].resultReason = $"{qualifiers[i].SupplyKinds} Supply kinds, but the bunker was full";
 
             AddLog($"SUNDOWN. {BunkerSeated} of {players.Count} made it into the bunker.");
         }

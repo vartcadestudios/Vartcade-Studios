@@ -41,6 +41,15 @@ namespace TDTS.Simulation
         public int conversionCost = 0;
         public int conversionSupply = 12; // how many real Supply cards can be converted into in a game
 
+        // R4: everyone must peek at least once a Night. With 1 Night action that peek is the whole turn.
+        public bool peekRequired = true;
+
+        // To qualify without the Key: 3 different Supply kinds (true, the rule) or any 3 real Supply (false, the old reading)
+        public bool differentKinds = true;
+
+        // Protection: once you've been stolen from, nobody can steal from you again until the next Night
+        public bool stealProtection = false;
+
         public bool rondo = true;         // Rondo events from Day 6
         public bool strongRondo = false;  // from Day 4, Purge 10, Hunger/Outbreak take 2, Doomsday takes 2 days
 
