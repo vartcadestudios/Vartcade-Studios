@@ -165,6 +165,10 @@ namespace TDTS.EditorTools
             settings.keyInTopHalf = EditorGUILayout.Toggle(
                 new GUIContent("Key in the top half", "The Bunker Key is shuffled into the top half of the draw pile."),
                 settings.keyInTopHalf);
+            settings.keyStart = (KeyStart)EditorGUILayout.EnumPopup(
+                new GUIContent("Key starts", "Shuffled: the game. DealtAtStart: a player starts with it. " +
+                                             "Discarded: out of the game from the start. NeverDrawn: at the bottom of the pile."),
+                settings.keyStart);
             settings.bunkerSeats = EditorGUILayout.IntSlider(
                 new GUIContent("Bunker seats", "0 = like the game: 2 seats, 3 with 5 or 6 players."), settings.bunkerSeats, 0, 4);
 

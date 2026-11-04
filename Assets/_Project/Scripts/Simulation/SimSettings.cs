@@ -23,6 +23,15 @@ namespace TDTS.Simulation
         AdjacentOnly  // you choose the card, but only from a player sitting next to you
     }
 
+    /// <summary>Where the Bunker Key starts, to test games with and without it.</summary>
+    public enum KeyStart
+    {
+        Shuffled,    // the game: shuffled into the pile (top half if keyInTopHalf)
+        DealtAtStart,// "the Key is drawn": one player is dealt it in their starting hand
+        Discarded,   // "the Key is discarded": face up in the discard pile from the start, out of the game
+        NeverDrawn   // "the Key is not drawn": at the bottom of the draw pile
+    }
+
     /// <summary>The knobs the Balance Simulator can turn. Defaults match the real game.</summary>
     [Serializable]
     public class SimSettings
@@ -83,6 +92,8 @@ namespace TDTS.Simulation
 
         // The Bunker Key is shuffled into the top half of the draw pile, so it's almost always found
         public bool keyInTopHalf = true;
+
+        public KeyStart keyStart = KeyStart.Shuffled;
 
         public int bunkerSeats = 0; // 0 = like the game: 2 seats, 3 with 5 or 6 players
 

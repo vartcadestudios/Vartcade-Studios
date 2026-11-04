@@ -44,6 +44,7 @@ namespace TDTS.Simulation
         public int sundownDay;
         public int bunkerSeats = 2;
         public int catchUpDraws;
+        public string keyFate = ""; // where the Key was at Sundown
         public int tradesOffered;
         public int tradesAccepted;
         public int stalledTurns; // turns that ended early because no move went through
@@ -159,6 +160,7 @@ namespace TDTS.Simulation
 
             result.sundownDay = sundownDay;
             result.bunkerSeats = settings.SeatsFor(players.Count);
+            result.keyFate = KeyFate();
             foreach (PlayerData p in players)
             {
                 SeatResult r = F(p);
@@ -200,9 +202,37 @@ namespace TDTS.Simulation
                 deck.Insert(rng.Next(deck.Count / 2, deck.Count + 1), keyCard); // the end of the list is the top
             }
 
+            keyInPlay = deck.Find(c => c.IsKey);
+            if (settings.keyStart != KeyStart.Shuffled)
+            {
+                deck.Remove(keyInPlay);
+                if (settings.keyStart == KeyStart.Discarded) discardPile.Add(keyInPlay);
+                else if (settings.keyStart == KeyStart.NeverDrawn) deck.Insert(0, keyInPlay); // the bottom of the pile
+            }
+
             for (int round = 0; round < GameManager.StartingHandSize; round++)
                 foreach (PlayerData p in players)
                     GiveCard(p, TakeTopCard());
+
+            if (settings.keyStart == KeyStart.DealtAtStart)
+            {
+                // Swap it for one of a random player's dealt cards, so hand sizes stay the same
+                PlayerData lucky = players[rng.Next(players.Count)];
+                int slot = rng.Next(lucky.hand.Count);
+                deck.Insert(rng.Next(deck.Count + 1), lucky.hand[slot]);
+                lucky.hand[slot] = keyInPlay;
+            }
+        }
+
+        private CardData keyInPlay;
+
+        private string KeyFate()
+        {
+            if (players.Any(p => p.hand.Contains(keyInPlay))) return "Held by a player at Sundown";
+            if (deck.Contains(keyInPlay)) return "Never drawn (still in the pile)";
+            if (discardPile.Contains(keyInPlay)) return "Discarded";
+            if (removedFromGame.Contains(keyInPlay)) return "Removed by Purge";
+            return "Elsewhere";
         }
 
         private void PlayPhase()
