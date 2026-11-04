@@ -95,6 +95,9 @@ namespace TDTS.Simulation
 
         public KeyStart keyStart = KeyStart.Shuffled;
 
+        // An exact card list to test (off = the game's random front/back pairing)
+        public CardSpread spread = new CardSpread();
+
         public int bunkerSeats = 0; // 0 = like the game: 2 seats, 3 with 5 or 6 players
 
         public int SeatsFor(int playerCount) => bunkerSeats > 0 ? bunkerSeats : playerCount >= 5 ? 3 : 2;

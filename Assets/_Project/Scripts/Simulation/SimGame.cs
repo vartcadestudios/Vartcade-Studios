@@ -193,7 +193,9 @@ namespace TDTS.Simulation
             }
 
             DeckBuilder.Shuffle(players, rng);
-            deck.AddRange(DeckBuilder.BuildDrawPile(settings.BuildRecipe(), rng, removedFromGame));
+            deck.AddRange(settings.spread.use
+                ? settings.spread.Build(settings.morningFronts, rng, removedFromGame)
+                : DeckBuilder.BuildDrawPile(settings.BuildRecipe(), rng, removedFromGame));
             if (settings.keyInTopHalf)
             {
                 int key = deck.FindIndex(c => c.IsKey);
