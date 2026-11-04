@@ -122,6 +122,7 @@ namespace TDTS.Simulation
         public int ConversionCost => settings.conversionCost;
         public int ConversionsLeft => conversionsLeft;
         public bool PeekRequired => settings.peekRequired;
+        public bool PeekIsFree => peeksThisTurn < settings.freePeeks;
         public bool NeedDifferentKinds => settings.differentKinds;
 
         /// <summary>What counts toward the 3 needed: different kinds, or any real Supply under the old reading.</summary>
@@ -385,7 +386,8 @@ namespace TDTS.Simulation
             bool isNight = state == GameState.NightPhase;
 
             // R4: the last Night action must be a peek if there hasn't been one
-            bool mustPeek = settings.peekRequired && isNight && actionsLeft == 1 && peeksThisTurn == 0 && p.hand.Count > 0;
+            bool mustPeek = settings.peekRequired && isNight && peeksThisTurn == 0 && p.hand.Count > 0
+                            && (settings.freePeeks > 0 || actionsLeft == 1);
             if (mustPeek && m.kind != MoveKind.Peek) return false;
 
             switch (m.kind)
@@ -407,8 +409,9 @@ namespace TDTS.Simulation
                     CardData peeked = p.hand[m.handIndex];
                     peeked.peeked = true;
                     brains[p].Memory.Saw(peeked);
+                    bool free = peeksThisTurn < settings.freePeeks;
                     peeksThisTurn++;
-                    SpendAction();
+                    if (!free) SpendAction();
                     return true;
 
                 case MoveKind.Steal:

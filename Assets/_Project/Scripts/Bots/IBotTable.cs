@@ -30,6 +30,9 @@ namespace TDTS.Bots
         /// <summary>R4: a peek is required every Night (a test switch can turn it off).</summary>
         bool PeekRequired { get; }
 
+        /// <summary>Test rule: the next peek tonight won't use a Night action.</summary>
+        bool PeekIsFree { get; }
+
         /// <summary>True when qualifying needs 3 different Supply kinds rather than any 3 real Supply.</summary>
         bool NeedDifferentKinds { get; }
 

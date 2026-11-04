@@ -140,6 +140,11 @@ namespace TDTS.EditorTools
                                                             "so nobody can Steal, Swap or play a Night card."),
                 settings.peekRequired);
 
+            settings.freePeeks = EditorGUILayout.IntSlider(
+                new GUIContent("Free peeks each Night", "Peeks that don't use a Night action. 0 = every peek uses an action (the game). " +
+                                                        "5 or more means effectively all peeks are free."),
+                settings.freePeeks, 0, 5);
+
             settings.stealProtection = EditorGUILayout.Toggle(
                 new GUIContent("Steal protection", "Once you've been stolen from, nobody can steal from you again that Night."),
                 settings.stealProtection);

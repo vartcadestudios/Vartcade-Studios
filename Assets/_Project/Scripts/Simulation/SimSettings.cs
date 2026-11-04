@@ -58,6 +58,9 @@ namespace TDTS.Simulation
         // R4: everyone must peek at least once a Night. With 1 Night action that peek is the whole turn.
         public bool peekRequired = true;
 
+        // Free peeks each Night: they don't use a Night action. 0 = every peek uses an action (the game), 99 = all free
+        public int freePeeks = 0;
+
         // To qualify without the Key: 3 different Supply kinds (true, the rule) or any 3 real Supply (false, the old reading)
         public bool differentKinds = true;
 

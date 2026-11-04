@@ -26,6 +26,7 @@ namespace TDTS.Bots
         public int ConversionCost => 0; // conversion is only a Balance Simulator test so far
         public int ConversionsLeft => 0;
         public bool PeekRequired => true;
+        public bool PeekIsFree => false;
         public bool NeedDifferentKinds => true;
         public bool CanStealFrom(PlayerData thief, PlayerData victim) => true;
         public bool FrontUsed(CardData card) => card.frontUsed;

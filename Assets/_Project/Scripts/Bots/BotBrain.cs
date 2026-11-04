@@ -259,7 +259,9 @@ namespace TDTS.Bots
         private void AddNightMoves(IBotTable table, PlayerData me, List<BotMove> moves)
         {
             // R4: the last action of the night must be a peek if it hasn't peeked yet
-            bool mustPeek = table.PeekRequired && table.ActionsLeft == 1 && table.PeeksThisTurn == 0 && me.hand.Count > 0;
+            // With free peeks, the required peek comes first; otherwise it's forced on the last action
+            bool mustPeek = table.PeekRequired && table.PeeksThisTurn == 0 && me.hand.Count > 0
+                            && (table.PeekIsFree || table.ActionsLeft == 1);
 
             for (int i = 0; i < me.hand.Count; i++)
             {
@@ -268,7 +270,8 @@ namespace TDTS.Bots
                 moves.Add(new BotMove
                 {
                     kind = MoveKind.Peek, handIndex = i,
-                    score = (unknown ? 1f : 0.1f) * Profile.caution + (table.PeeksThisTurn == 0 ? 2f : 0f),
+                    score = (unknown ? 1f : 0.1f) * Profile.caution + (table.PeeksThisTurn == 0 ? 2f : 0f)
+                            + (table.PeekIsFree && unknown ? 2f : 0f), // costs nothing, so look first
                     reason = unknown ? $"doesn't know what its {me.hand[i].FrontName} really is" : "has to peek tonight",
                 });
             }
