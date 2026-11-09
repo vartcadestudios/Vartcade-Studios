@@ -1,0 +1,134 @@
+TEN DAYS TO SUNDOWN - CARD SPREAD TEST
+======================================
+Balance Simulator, 1,000 games per setup, 4 players unless noted.
+All tests: 3 different Supply kinds to qualify, kept Morning cards, catch-up draw,
+Key in the top half of the pile, 3 bunker seats at 5-6 players, forgetful (casual) players.
+
+Current rules = 2 Night actions, each peek costs 1 action (the game now)
+New rules     = 1 Night action, all peeks free
+
+YOUR CARD SPREAD (checked card by card)
+Supply-front cards, for EACH kind (Food, Water, Medicine, Entertainment), 13 per kind:
+   6 real Supply back, 5 Trash back, 1 Night Skip back, 1 Day Skip back
+   Total on Supply fronts: 24 real / 20 Trash / 4 Night Skip / 4 Day Skip
+Morning-front cards (20, 4 of each), backs spread evenly over the five Morning cards:
+   2 Supply, 6 Trash, 8 Flashlight, 2 Night Skip, 2 Day Skip
+Whole deck: 8 Flashlight, 6 Night Skip, 6 Day Skip, plus the Bunker Key.
+Note: the 2 Supply backs on Morning cards are left out of the 24/20 count, as asked,
+but in play they count as real Supply (one Food, one Water) because their back is Supply.
+
+The "Random pairing" rows are the game's current deck for comparison:
+36 real Supply and 16 Trash backs, with fronts and backs paired at random.
+
+(Tables line up best in a monospace font.)
+
+
+TABLE 1 - YOUR SPREAD vs THE CURRENT DECK, 4 PLAYERS
+----------------------------------------------------
+Rules / deck                                    Survivors    Nobody    Aggr.    Human   Passive   Random     Gap
+Current: Random pairing (36 real / 16 Trash)         1.87      0.0%    56.8%    53.1%     41.4%    35.9%    20.9
+Current: Your spread (24 real / 20 Trash)            1.70      0.6%    47.7%    46.2%     42.4%    33.7%    14.0
+New: Random pairing (36 real / 16 Trash)             1.83      0.0%    50.3%    49.7%     47.7%    35.0%    15.3
+New: Your spread (24 real / 20 Trash)                1.67      0.6%    43.2%    47.4%     44.1%    32.1%    15.3
+
+How players finish (4 players). 'Got in by Key' is the share of survivors; the others are shares of all players.
+TABLE 2 - HOW GAMES END, 4 PLAYERS
+----------------------------------
+Rules / deck                                    Got in by   Lost: <3  Lost: tie   Hopeless  Collapsed   Avg real
+Current: Random pairing (36 real / 16 Trash)        51.1%      24.2%      29.0%       5.0%      31.5%        4.5
+Current: Your spread (24 real / 20 Trash)           56.6%      45.7%      11.8%      16.6%      17.6%        3.1
+New: Random pairing (36 real / 16 Trash)            52.5%      26.1%      28.3%       4.2%      31.8%        4.4
+New: Your spread (24 real / 20 Trash)               57.1%      48.8%       9.5%      20.2%      15.2%        2.9
+
+Frustration, per player per game. SupLost = real Supply lost to Steal/Swap. NightSk = Night/Day Skip
+cards played per game. Wait = minutes of waiting per game at 6 s per action.
+TABLE 3 - FRUSTRATING MOMENTS, 4 PLAYERS
+----------------------------------------
+Rules / deck                                      Stolen   SupLost   KeyLost  PeekLost     Rondo   Skipped   Refused   NightSk     Wait
+Current: Random pairing (36 real / 16 Trash)        4.73      3.04      0.45       6.4      1.30      0.36      2.85      0.27      8.4
+Current: Your spread (24 real / 20 Trash)           4.39      1.29      0.47       5.9      1.13      0.35      2.98      0.24      8.4
+New: Random pairing (36 real / 16 Trash)            4.26      4.10      0.53      10.1      1.24      0.47      3.27      0.78     12.4
+New: Your spread (24 real / 20 Trash)               3.68      2.28      0.50       8.8      1.15      0.40      3.46      0.57     12.3
+
+TABLE 4 - YOUR SPREAD, 6 PLAYERS (3 bunker seats)
+-------------------------------------------------
+Rules       Survivors    Aggr.    Human   Passive   Random     Gap   Hopeless   Stolen   SupLost
+Current          2.37    38.9%    44.5%     33.1%    31.9%    12.6      20.3%     4.83      1.49
+New              2.32    35.4%    42.6%     39.7%    28.9%    13.7      23.8%     2.90      2.36
+
+TABLE 5 - DIFFERENT REAL / TRASH SPREADS, CURRENT RULES, 4 PLAYERS
+------------------------------------------------------------------
+Real / Trash on Supply fronts       Survivors   Nobody    Lost:<3   Lost:tie   Hopeless   Collapse    Aggr.    Human  Passive   Random     Gap
+3 real / 8 Trash per kind (12/32)        1.23     2.2%      68.7%       0.6%      49.7%       7.9%    33.2%    34.7%    27.0%    27.8%     6.9
+4 real / 7 Trash per kind (16/28)        1.40     0.8%      62.4%       2.5%      35.9%       9.7%    38.9%    39.3%    32.2%    29.9%     9.4
+5 real / 6 Trash per kind (20/24)        1.56     0.9%      54.6%       6.5%      25.4%      12.6%    44.6%    42.1%    38.3%    31.0%    13.6
+6 real / 5 Trash per kind (24/20)        1.70     0.6%      45.7%      11.8%      16.6%      17.6%    47.7%    46.2%    42.4%    33.7%    14.0
+7 real / 4 Trash per kind (28/16)        1.77     0.1%      38.5%      17.3%      11.3%      21.1%    48.4%    52.8%    41.2%    34.7%    18.1
+8 real / 3 Trash per kind (32/12)        1.84     0.0%      28.8%      25.4%       7.3%      26.9%    48.3%    52.5%    45.1%    37.6%    14.9
+9 real / 2 Trash per kind (36/8)         1.87     0.1%      21.9%      31.5%       3.4%      32.6%    53.3%    52.8%    45.4%    35.2%    18.1
+
+TABLE 6 - DIFFERENT REAL / TRASH SPREADS, NEW RULES, 4 PLAYERS
+--------------------------------------------------------------
+Real / Trash on Supply fronts       Survivors   Nobody    Lost:<3   Lost:tie   Hopeless   Collapse    Aggr.    Human  Passive   Random     Gap
+3 real / 8 Trash per kind (12/32)        1.20     3.0%      69.3%       0.8%      50.7%       8.1%    30.6%    33.5%    31.4%    24.4%     9.1
+4 real / 7 Trash per kind (16/28)        1.35     1.6%      64.1%       2.1%      39.7%       9.2%    32.4%    36.8%    37.1%    28.9%     8.2
+5 real / 6 Trash per kind (20/24)        1.53     1.0%      57.4%       4.5%      29.5%      10.7%    40.9%    42.3%    40.7%    28.7%    13.6
+6 real / 5 Trash per kind (24/20)        1.67     0.6%      48.8%       9.5%      20.2%      15.2%    43.2%    47.4%    44.1%    32.1%    15.3
+7 real / 4 Trash per kind (28/16)        1.77     0.7%      39.6%      16.2%      12.8%      20.6%    46.7%    48.3%    49.0%    32.9%    16.1
+8 real / 3 Trash per kind (32/12)        1.84     0.0%      30.0%      24.1%       7.1%      27.6%    48.7%    50.1%    48.2%    36.6%    13.5
+9 real / 2 Trash per kind (36/8)         1.86     0.0%      23.0%      30.7%       4.0%      32.7%    50.8%    49.1%    50.3%    35.3%    15.5
+
+In Tables 5 and 6 each kind always has 13 Supply-front cards (real + Trash = 11, plus 1 Night Skip and
+1 Day Skip). The Morning backs stay as in your spread.
+
+
+WHAT YOUR SPREAD CHANGES (compared with the current random deck)
+---------------------------------------------------------------
+- Harder to survive. Fewer real Supply cards (24 + 2 instead of 36), so:
+  survivors per game drop from about 1.85 to about 1.7, and about 46-49% of players
+  now lose because they can't collect 3 kinds (was about 24-26%).
+- Much fewer tie losses: only about 10-12% lose a tie or find the bunker full (was about 28-29%).
+  Reaching 3 kinds is the real challenge again.
+- More balanced under the current rules: Aggressive drops from 57% to 48%, the skill gap
+  shrinks from 21 to 14 points. Under the new rules the gap stays about 15.
+- The Key matters more: about 57% of survivors get in by the Key (was about 51-52%).
+- Less Supply lost to stealing: 1.3 per player per game under the current rules (was 3.0),
+  because there's less real Supply around to steal.
+- Main downside: many more players are hopeless going into the last Day:
+  about 17% (current rules) and 20% (new rules), up from about 4-5%.
+
+NEW RULES vs CURRENT RULES, WITH YOUR SPREAD
+-------------------------------------------
+- Similar survivors (1.67 vs 1.70) and a similar skill gap (15 vs 14).
+- New rules lift Human-like and Passive (47% and 44%) and lower Aggressive (43%).
+  Current rules: Aggressive 48%, Human-like 46%, Passive 42%.
+- New rules: fewer steals (3.7 vs 4.4 cards) but more Supply lost overall (2.3 vs 1.3),
+  because free peeking makes Swaps more targeted.
+- New rules: more Flashlights and Skip cards played (3.2 and 0.6 per game vs 1.4 and 0.2).
+- New rules: a bit more hopelessness (20% vs 17%) and longer waiting (about 12 vs 8 min).
+
+DIFFERENT REAL / TRASH SPREADS (Tables 5 and 6)
+-----------------------------------------------
+- 3-4 real per kind (12-16 real): too harsh. Only 1.2-1.4 survivors, 36-51% hopeless,
+  and luck decides more than skill (gap only 7-9 points).
+- 5 real per kind (20 real): still harsh, 25-30% hopeless.
+- 6 real per kind (your spread, 24 real): 17-20% hopeless, ties rare.
+- 7 real per kind (28 real): the best middle ground. 1.77 survivors, 11-13% hopeless,
+  ties 16-17%, gap 16-18 points, and about 39-40% still lose for lacking 3 kinds.
+- 8-9 real per kind (32-36 real): easy to reach 3 kinds; ties decide more (24-32%)
+  and hopelessness is low (3-7%).
+
+WHAT STAYED THE SAME AS PREVIOUS TESTS
+--------------------------------------
+- Stealing is still about 3.7-4.9 cards per player per game, the biggest frustration.
+- Rondo losses about 1.1-1.3, Skip turns about 0.3-0.4, refused trades about 3 per player.
+- Turn order is close to fair (first 43%, last 44% with your spread).
+- The new rules are still at least as balanced as the current rules, and slower.
+- Night and Day Skip cards are still rarely played (well under 1 per game), even with more
+  of them on Supply fronts: they're hidden on backs and players spend Night actions elsewhere.
+
+SUGGESTION
+----------
+Your spread works, but it leaves about 1 in 5 players with no hope on the last Day.
+Moving to 7 real / 4 Trash per kind (28 real / 16 Trash) keeps most of the benefits
+(rare ties, balanced strategies) while cutting hopeless players to about 1 in 8.

@@ -1,0 +1,51 @@
+﻿Ten Days to Sundown - NEW DECK: 20 Morning fronts (4 of each), 20 Night backs (8 Flashlight, 6 Night Skip, 6 Day Skip); one-use Flashlight that reveals a whole hand; 3 different Supply kinds to qualify; forgetful players; 1000 games per row
+Test,Setup,Survivors per game,Nobody survived,Lost: under 3 kinds,Lost: tie or bunker full,Avg real Supply,Aggressive,Human-like,Passive,Random,Skill gap,1st player survived,Last player survived,Key held at Sundown,Cards stolen per player,Real Supply lost to Steal/Swap per player,Turns lost to a Skip per player,Hopeless last Day,Collapsed at the end,Lost with 3 kinds
+Deck,Old deck 18+18 (36 Supply / 18 Trash),1.63,4.9%,48.9%,10.4%,3.5,57.7%,50.3%,30.5%,24.3%,33.4 pts,40.5%,43.6%,51.9%,4.82,3.37,0.21,22.1%,15.0%,10.4%
+Deck,New deck 20+20 (36 Supply / 16 Trash),1.64,4.0%,48.6%,10.4%,3.4,56.8%,51.2%,33.3%,22.8%,34.0 pts,38.3%,42.5%,53.2%,4.87,3.39,0.21,23.9%,15.0%,10.4%
+Deck,New deck 20+20 (34 Supply / 18 Trash),1.56,6.0%,52.8%,8.4%,3.2,55.2%,47.8%,30.2%,22.3%,32.9 pts,38.0%,40.6%,52.8%,4.80,3.23,0.20,26.4%,13.6%,8.4%
+Deck,"Old deck, 6 players",1.82,0.9%,45.7%,24.1%,3.5,35.1%,36.1%,19.4%,18.8%,17.3 pts,29.1%,30.2%,79.6%,5.43,3.77,0.13,19.3%,25.1%,24.1%
+Deck,"New deck, 6 players",1.80,0.6%,44.8%,25.2%,3.6,34.8%,34.4%,22.6%,19.3%,15.5 pts,28.9%,31.9%,81.6%,5.50,3.73,0.13,18.9%,25.8%,25.2%
+
+"Action cards - old deck, 4 players"
+Card,Type,Times played,Per game,Used in % of games,Win rate when played,Played most by
+Swap Deck,Morning,1421,1.42,84.6%,45.0%,Random
+Flashlight,Night,1282,1.28,77.3%,33.8%,Passive
+Everyone Switches,Morning,759,0.76,57.8%,40.3%,Random
+Skip Next Player,Morning,556,0.56,46.2%,28.4%,Random
+Reverse Turn,Morning,529,0.53,44.5%,20.6%,Random
+Everyone +1 Card,Morning,419,0.42,36.0%,25.3%,Random
+Targeted Night Skip,Night,171,0.17,16.2%,32.2%,Random
+Targeted Day Skip,Night,141,0.14,13.0%,22.0%,Random
+
+Test,Setup,Survivors per game,Nobody survived,Lost: under 3 kinds,Lost: tie or bunker full,Avg real Supply,Aggressive,Human-like,Passive,Random,Skill gap,1st player survived,Last player survived,Key held at Sundown,Cards stolen per player,Real Supply lost to Steal/Swap per player,Turns lost to a Skip per player,Hopeless last Day,Collapsed at the end,Lost with 3 kinds
+
+"Action cards - new deck, 4 players"
+Card,Type,Times played,Per game,Used in % of games,Win rate when played,Played most by
+Flashlight,Night,1680,1.68,86.9%,36.1%,Passive
+Swap Deck,Morning,1459,1.46,85.3%,43.2%,Random
+Everyone Switches,Morning,988,0.99,65.7%,40.3%,Random
+Skip Next Player,Morning,586,0.59,47.7%,26.1%,Random
+Reverse Turn,Morning,504,0.50,42.2%,22.8%,Random
+Everyone +1 Card,Morning,502,0.50,40.9%,25.3%,Random
+Targeted Night Skip,Night,179,0.18,17.0%,23.5%,Random
+Targeted Day Skip,Night,151,0.15,13.5%,25.2%,Random
+
+Test,Setup,Survivors per game,Nobody survived,Lost: under 3 kinds,Lost: tie or bunker full,Avg real Supply,Aggressive,Human-like,Passive,Random,Skill gap,1st player survived,Last player survived,Key held at Sundown,Cards stolen per player,Real Supply lost to Steal/Swap per player,Turns lost to a Skip per player,Hopeless last Day,Collapsed at the end,Lost with 3 kinds
+Actions,1 Day / 1 Night,1.64,4.4%,46.6%,12.5%,3.5,47.1%,47.2%,44.3%,25.0%,22.2 pts,37.4%,41.4%,53.7%,0.01,0.00,0.13,20.8%,15.8%,12.5%
+Actions,1 Day / 3 Night,1.56,5.5%,51.7%,9.4%,3.3,50.8%,46.2%,34.9%,23.9%,26.9 pts,35.8%,43.0%,51.8%,5.16,4.31,0.79,24.1%,15.5%,9.4%
+Actions,2 Day / 1 Night,1.93,0.0%,17.9%,33.8%,6.0,52.6%,53.6%,51.6%,35.6%,18.0 pts,47.9%,47.7%,90.2%,0.01,0.00,0.37,5.3%,35.5%,33.8%
+Actions,2 Day / 2 Night,1.92,0.0%,18.1%,34.0%,6.0,56.9%,56.7%,46.9%,31.1%,25.8 pts,48.6%,48.6%,89.5%,4.55,2.98,0.41,5.2%,35.6%,34.0%
+Actions,3 Day / 2 Night,1.92,0.0%,19.3%,32.8%,5.7,56.9%,51.0%,45.3%,38.5%,18.4 pts,47.2%,46.4%,98.1%,4.34,2.85,0.83,4.6%,37.7%,32.8%
+Drawing,Draw: FreeEachDay,1.92,0.1%,10.8%,41.1%,6.6,53.7%,54.1%,45.1%,39.5%,14.6 pts,49.4%,45.6%,95.2%,4.45,2.91,0.32,1.1%,42.6%,41.1%
+Drawing,Draw: NoDrawing,0.17,83.9%,95.9%,0.0%,0.6,7.5%,2.4%,3.8%,2.8%,4.7 pts,3.6%,3.8%,14.0%,6.85,4.38,0.20,88.1%,3.0%,0.0%
+Drawing,Draw: ForcedWhenLow,1.66,2.3%,47.2%,11.4%,3.5,54.5%,51.9%,32.8%,26.3%,28.2 pts,40.4%,44.8%,54.7%,4.80,3.28,0.20,20.6%,15.8%,11.4%
+Drawing,Draw: ForcedEvenDays,1.77,1.5%,40.0%,15.7%,4.0,62.2%,51.2%,33.7%,30.2%,32.0 pts,42.0%,46.3%,57.5%,4.78,3.23,0.15,15.7%,17.9%,15.7%
+Rondo,Rondo off,1.85,0.1%,30.1%,23.6%,4.5,62.5%,58.8%,36.3%,27.6%,34.9 pts,44.8%,49.5%,57.4%,5.07,3.59,0.24,9.6%,25.7%,23.6%
+Rondo,Rondo strong,1.27,14.0%,63.8%,4.4%,2.7,44.4%,39.7%,23.1%,20.0%,24.4 pts,30.4%,32.1%,46.8%,4.50,2.97,0.17,39.1%,9.2%,4.4%
+Supply ratio,28 Supply / 24 Trash,1.31,12.4%,63.1%,4.1%,2.6,45.8%,40.1%,25.7%,19.6%,26.2 pts,33.5%,30.1%,51.3%,4.57,2.70,0.21,36.4%,10.5%,4.1%
+Supply ratio,44 Supply / 8 Trash,1.80,0.8%,35.4%,19.7%,4.4,62.8%,52.9%,37.1%,26.9%,35.9 pts,46.2%,44.2%,54.0%,5.23,3.88,0.21,13.1%,22.1%,19.7%
+Supply ratio,52 Supply / 0 Trash,1.87,0.2%,23.3%,29.9%,5.3,65.3%,55.1%,34.8%,32.1%,33.2 pts,44.3%,48.5%,55.9%,5.60,4.30,0.21,6.8%,28.8%,29.9%
+Conversion,Convert 3 cards -> 1 Supply,1.49,7.1%,56.0%,6.8%,3.2,56.9%,48.9%,29.0%,14.0%,42.9 pts,35.0%,41.1%,41.3%,5.21,3.50,0.18,28.9%,12.8%,6.8%
+Combinations,Free draw each Day + strong Rondo,1.85,0.3%,25.4%,28.5%,5.1,53.7%,50.7%,43.1%,37.1%,16.6 pts,45.9%,47.9%,86.8%,4.09,2.59,0.28,7.1%,30.6%,28.5%
+Combinations,2 Day / 2 Night + strong Rondo,1.84,0.7%,31.9%,22.1%,4.6,54.8%,53.9%,43.7%,31.9%,22.9 pts,44.6%,44.3%,81.4%,4.17,2.67,0.35,12.3%,26.6%,22.1%
+Combinations,"Free draw each Day + strong Rondo, 6 players",1.69,1.3%,55.5%,16.3%,3.1,33.4%,29.6%,23.5%,23.4%,10.0 pts,28.2%,27.1%,95.6%,4.71,3.06,0.34,22.1%,24.4%,16.3%

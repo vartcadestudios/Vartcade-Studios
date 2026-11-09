@@ -1,0 +1,90 @@
+TEN DAYS TO SUNDOWN - WHAT TO COMMIT IN UNITY
+=============================================
+Recommendation based on every Balance Simulator test so far (tens of thousands of games),
+using forgetful (casual) players. Bots are not people, so treat this as the starting point
+for playtests, not the final word.
+
+
+1. COMMIT THESE (keep or add)
+-----------------------------
+Already in the Unity build, keep them:
+  a) Survive with the Key OR 3 DIFFERENT Supply kinds.
+     Makes collecting the real goal; ties and "full bunker" losses dropped from about 27% to 10%.
+  b) 20 + 20 deck: 4 of each Morning card; 8 Flashlight, 6 Night Skip, 6 Day Skip backs.
+  c) One-use Flashlight that shows a whole hand (yours too).
+     Played about 1.4-1.9 times a game, about as strong as the old 3-battery version, easier to read.
+  d) Played Morning cards stay in your hand (each front works once).
+     Morning cards went from losing cards (about 26% win rate when played) to useful ones (about 44%).
+  e) Catch-up draw from Day 2 for whoever is furthest behind.
+     Hopeless last Days dropped from about 23% to 5-8%. This matters even more with the card spread below.
+  f) Key in the top half of the draw pile.
+     The Key shows up in about 96% of games instead of about 50%; "nobody survives" almost disappears.
+  g) Doomsday Clock can't land on the last Day (it did nothing there).
+  h) 2 bunker seats, 3 with 5-6 players.
+     At 6 players each player's chance goes from about 30% to about 45%.
+
+Add next:
+  i) A FIXED CARD SPREAD instead of random front/back pairing.
+     Use your spread, but with 7 real / 4 Trash per Supply kind (instead of 6 / 5):
+       Each Supply kind (13 cards): 7 real Supply, 4 Trash, 1 Night Skip, 1 Day Skip back
+       = 28 real / 16 Trash / 4 Night Skip / 4 Day Skip on Supply fronts
+       Morning fronts (20): 2 Supply, 6 Trash, 8 Flashlight, 2 Night Skip, 2 Day Skip backs
+     Why 7/4 and not 6/5:
+       6/5: very balanced, but about 17-20% of players are hopeless on the last Day.
+       7/4: hopeless drops to about 11-13%, ties stay low (about 17%), 1.77 survivors per game.
+       8/3 or more: 3 kinds gets too easy and ties start deciding games again.
+     If the team wants a harsher, tenser game, 6/5 is the fallback; nothing else needs changing.
+
+
+2. NIGHT RULES: KEEP THE CURRENT ONES, BUT EXPLAIN THEM BETTER
+--------------------------------------------------------------
+Tested: current (2 Night actions, a peek costs 1, must peek once)
+   vs new (1 Night action, all peeks free).
+- With the random deck, the new rules were more balanced (skill gap 15 vs 21).
+- With the card spread you'd actually use, they come out about even (gap 15 vs 14),
+  and the new rules cost more:
+     more real Supply lost per game (2.3 vs 1.3, from more Swaps),
+     more hopeless players (20% vs 17%),
+     about 50% longer waiting (12 vs 8 minutes per game).
+So keep the current Night rules. They test exactly the same as
+"1 free peek, then 1 action", which is easier to teach. Write the rule as:
+   NIGHT: Peek at one of your cards (free, required), then take 1 action:
+          Steal, Swap, peek again, or play a Night card.
+          You may Steal or Swap only once a Night.
+Nothing changes in the code for this; it's the same rule worded more simply
+(update the How to Play text and the FC docs).
+
+
+3. DO NOT COMMIT THESE (tested and they don't help)
+---------------------------------------------------
+- Resource conversion: helps strong players more, and players accidentally convert the Key.
+- Blind steal, neighbours-only steal, steal protection: almost no change.
+- First Night card free: no change.
+- 1 Night action with paid peeks: deletes Steal, Swap and Night cards entirely.
+- No drawing (game breaks: nobody survives 80% of the time) and a free card every Day
+  (hands flood and ties decide everything).
+- The strong Rondo on its own: too harsh (nobody survives in about 14% of games).
+
+
+4. STILL OPEN (decide later, after people playtest)
+---------------------------------------------------
+- Stealing is the biggest frustration in every test (about 4 cards per player per game).
+  Next ideas worth testing: the victim learns who stole, or Steal costs the thief a card.
+- Night and Day Skip cards are rarely played (under 1 per game) because they're hidden on backs.
+  Idea: put some on Morning fronts.
+- Waiting: about 8 minutes per game at 4 players and 14 at 6. Keep peeks and animations quick
+  (a turn timer would help).
+- Play real games with classmates (requests Q07 and Q15) to check how stealing actually feels.
+
+
+5. WHAT THIS MEANS FOR THE UNITY BUILD
+--------------------------------------
+- Items a-h are in the code (on the local branch feature/balance-results).
+- Item i is now in the game too: the deck is built from the fixed card spread
+  (7 real / 4 Trash per kind) instead of random front/back pairing. The Card Gallery
+  and the Balance Simulator use the same deck.
+- Item 2: the How to Play Night text now reads "two actions, and one must be a Peek".
+  The FC01-FC03 docs still need the same update.
+- The FC docs are out of date on a, b, d-i and need new section 7 rows.
+- GitHub: nothing new is pushed yet. When the rules are agreed, push the branch and open a
+  pull request into develop (main only changes through a reviewed pull request).

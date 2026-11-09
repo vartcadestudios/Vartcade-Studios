@@ -1,0 +1,305 @@
+﻿Ten Days to Sundown - frustrating moments (Balance Simulator, forgetful players)
+Balanced rules = 1 Night action + stronger Rondo + forced draw on even Days
+
+"Real rules, 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,4.81,99.2%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,3.37,96.0%,A real Supply card left your hand because of another player
+Lost the Key,0.21,18.8%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.45,38.2%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.11,72.4%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,5.53,98.9%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.22,19.0%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.17,17.1%,Your turn ended with actions left: no move was possible
+Trades refused,2.84,64.8%,Your trade offer was turned down
+Hopeless last Day,0.17,16.9%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.27,27.1%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.27,27.4%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 8.4 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,3.39,2.36,0.14,29.7%,27.5%,0.23
+Passive,4.32,3.23,0.21,21.0%,31.7%,0.16
+Aggressive,4.95,3.63,0.25,8.1%,24.2%,0.16
+Human-like,6.59,4.25,0.24,8.9%,26.1%,0.14
+
+"Balanced rules, 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,0.00,0.0%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,0.00,0.0%,A real Supply card left your hand because of another player
+Lost the Key,0.10,10.2%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.27,26.0%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.78,80.1%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,3.91,93.3%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.07,6.8%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.09,9.0%,Your turn ended with actions left: no move was possible
+Trades refused,1.31,47.7%,Your trade offer was turned down
+Hopeless last Day,0.19,18.9%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.21,20.9%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.28,28.5%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 5.1 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,0.00,0.00,0.07,27.4%,29.6%,0.13
+Passive,0.00,0.00,0.12,17.3%,29.6%,0.08
+Aggressive,0.00,0.00,0.11,15.4%,26.9%,0.07
+Human-like,0.00,0.00,0.13,15.6%,27.8%,0.08
+
+"Real rules, 6 players - 6 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,5.42,99.6%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,3.72,97.2%,A real Supply card left your hand because of another player
+Lost the Key,0.23,20.9%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.58,47.2%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.17,74.0%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,6.33,99.6%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.13,11.9%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.10,10.2%,Your turn ended with actions left: no move was possible
+Trades refused,3.21,61.8%,Your trade offer was turned down
+Hopeless last Day,0.14,13.9%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.44,43.6%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.46,46.3%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,5.0 actions by others for each of yours,-,About 14.1 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,3.62,2.57,0.16,28.9%,39.0%,0.13
+Passive,4.02,3.11,0.22,16.3%,46.8%,0.09
+Aggressive,6.54,4.40,0.24,10.4%,47.6%,0.11
+Human-like,6.11,4.08,0.25,9.3%,48.2%,0.09
+
+"Balanced rules, 6 players - 6 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,0.00,0.1%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,0.00,0.1%,A real Supply card left your hand because of another player
+Lost the Key,0.13,12.6%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.33,30.4%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.81,80.8%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,4.98,96.7%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.05,5.0%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.06,6.3%,Your turn ended with actions left: no move was possible
+Trades refused,1.87,53.2%,Your trade offer was turned down
+Hopeless last Day,0.20,19.7%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.34,33.9%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.41,41.1%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,5.0 actions by others for each of yours,-,About 8.6 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,0.00,0.00,0.10,31.9%,35.8%,0.10
+Passive,0.00,0.00,0.14,17.8%,44.1%,0.05
+Aggressive,0.00,0.00,0.12,18.1%,42.1%,0.06
+Human-like,0.00,0.00,0.14,16.8%,41.5%,0.06
+
+"Real rules but 1 Night action, 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,0.01,0.6%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,0.00,0.3%,A real Supply card left your hand because of another player
+Lost the Key,0.14,13.1%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.42,36.6%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.17,73.3%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,4.37,94.0%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.14,12.7%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.17,16.8%,Your turn ended with actions left: no move was possible
+Trades refused,3.00,67.8%,Your trade offer was turned down
+Hopeless last Day,0.14,13.9%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.31,30.6%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.32,31.9%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 5.6 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,0.00,0.00,0.07,28.8%,30.2%,0.22
+Passive,0.01,0.00,0.16,10.0%,30.8%,0.14
+Aggressive,0.01,0.01,0.17,8.9%,34.0%,0.17
+Human-like,0.00,0.00,0.17,7.7%,32.6%,0.14
+
+"Real rules but stronger Rondo, 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,4.42,99.2%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,3.00,94.5%,A real Supply card left your hand because of another player
+Lost the Key,0.19,17.1%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.36,32.5%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.62,77.0%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,4.94,99.3%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.19,16.5%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.21,21.2%,Your turn ended with actions left: no move was possible
+Trades refused,2.76,68.6%,Your trade offer was turned down
+Hopeless last Day,0.30,30.4%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.17,16.9%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.16,15.8%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 7.6 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,3.17,2.15,0.13,46.5%,15.3%,0.29
+Passive,3.89,2.85,0.20,36.2%,15.8%,0.21
+Aggressive,4.65,3.26,0.22,18.0%,14.2%,0.18
+Human-like,5.97,3.74,0.22,20.9%,17.7%,0.17
+
+"Survival: Aggressive 59.3%, Human-like 54.9%, Passive 33.2%, Random 24.2%; first player 42.5%, last player 45.5%"
+"Real rules, 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,4.81,99.2%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,3.37,96.0%,A real Supply card left your hand because of another player
+Lost the Key,0.21,18.8%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.45,38.2%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.11,72.4%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,5.53,98.9%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.22,19.0%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.17,17.1%,Your turn ended with actions left: no move was possible
+Trades refused,2.84,64.8%,Your trade offer was turned down
+Hopeless last Day,0.17,16.9%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.27,27.1%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.27,27.4%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 8.4 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,3.39,2.36,0.14,29.7%,27.5%,0.23
+Passive,4.32,3.23,0.21,21.0%,31.7%,0.16
+Aggressive,4.95,3.63,0.25,8.1%,24.2%,0.16
+Human-like,6.59,4.25,0.24,8.9%,26.1%,0.14
+
+"Survival: Aggressive 67.4%, Human-like 40.4%, Passive 38.7%, Random 27.1%; first player 41.4%, last player 44.9%"
+"1 Night action, no required peek, 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,2.36,88.5%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,1.42,73.1%,A real Supply card left your hand because of another player
+Lost the Key,0.19,16.3%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.44,37.4%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.10,72.5%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,3.23,86.9%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.14,11.9%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.16,16.5%,Your turn ended with actions left: no move was possible
+Trades refused,2.78,65.9%,Your trade offer was turned down
+Hopeless last Day,0.16,15.5%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.27,26.8%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.27,27.4%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 5.6 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,1.99,1.03,0.10,22.8%,28.8%,0.22
+Passive,3.08,1.87,0.21,17.0%,30.8%,0.14
+Aggressive,1.06,0.81,0.23,6.8%,17.9%,0.16
+Human-like,3.30,1.95,0.21,15.5%,31.9%,0.14
+
+"Survival: Aggressive 67.8%, Human-like 35.8%, Passive 32.4%, Random 31.2%; first player 38.6%, last player 44.1%"
+"1 Night, no required peek + stronger Rondo + forced draw on even Days, 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,2.21,88.0%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,1.20,69.5%,A real Supply card left your hand because of another player
+Lost the Key,0.12,11.7%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.29,26.1%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.69,78.8%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,2.85,86.0%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.08,7.6%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.09,9.2%,Your turn ended with actions left: no move was possible
+Trades refused,1.29,47.5%,Your trade offer was turned down
+Hopeless last Day,0.22,22.4%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.19,18.9%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.23,23.5%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 5.1 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,2.43,1.11,0.08,29.8%,26.6%,0.13
+Passive,2.63,1.47,0.14,25.9%,26.2%,0.08
+Aggressive,0.94,0.66,0.14,9.3%,17.3%,0.09
+Human-like,2.85,1.58,0.14,24.4%,23.7%,0.08
+
+"Survival: Aggressive 58.4%, Human-like 56.1%, Passive 34.7%, Random 24.3%; first player 43.8%, last player 44.5%"
+"2 Night actions, no required peek, 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,4.88,99.4%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,3.39,96.1%,A real Supply card left your hand because of another player
+Lost the Key,0.22,19.1%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.45,38.9%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.13,73.0%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,5.63,99.1%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.24,20.5%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.19,19.0%,Your turn ended with actions left: no move was possible
+Trades refused,2.89,66.4%,Your trade offer was turned down
+Hopeless last Day,0.16,16.0%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.27,27.1%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.27,26.9%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 8.4 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,3.46,2.45,0.15,28.0%,28.5%,0.24
+Passive,4.32,3.24,0.22,19.1%,28.8%,0.17
+Aggressive,5.05,3.60,0.26,8.8%,24.6%,0.17
+Human-like,6.68,4.29,0.26,8.0%,25.5%,0.17
+
+"Survival: Aggressive 33.1%, Human-like 34.2%, Passive 20.5%, Random 14.2%; first player 27.3%, last player 30.9%"
+"Real rules, 6 players - 6 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,5.42,99.6%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,3.72,97.2%,A real Supply card left your hand because of another player
+Lost the Key,0.23,20.9%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.58,47.2%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.17,74.0%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,6.33,99.6%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.13,11.9%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.10,10.2%,Your turn ended with actions left: no move was possible
+Trades refused,3.21,61.8%,Your trade offer was turned down
+Hopeless last Day,0.14,13.9%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.44,43.6%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.46,46.3%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,5.0 actions by others for each of yours,-,About 14.1 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,3.62,2.57,0.16,28.9%,39.0%,0.13
+Passive,4.02,3.11,0.22,16.3%,46.8%,0.09
+Aggressive,6.54,4.40,0.24,10.4%,47.6%,0.11
+Human-like,6.11,4.08,0.25,9.3%,48.2%,0.09
+
+"Survival: Aggressive 45.1%, Human-like 26.0%, Passive 24.3%, Random 22.7%; first player 26.6%, last player 26.9%"
+"1 Night, no required peek + stronger Rondo + forced draw on even Days, 6 players - 6 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,1.73,84.4%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,0.95,62.0%,A real Supply card left your hand because of another player
+Lost the Key,0.16,14.6%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.41,35.5%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.82,81.1%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,4.03,88.0%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.05,5.0%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.05,5.1%,Your turn ended with actions left: no move was possible
+Trades refused,1.61,47.8%,Your trade offer was turned down
+Hopeless last Day,0.21,21.5%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.30,30.4%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.38,37.8%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,5.0 actions by others for each of yours,-,About 8.6 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,1.64,0.76,0.12,27.3%,36.8%,0.07
+Passive,1.87,1.00,0.13,23.8%,38.1%,0.03
+Aggressive,0.85,0.58,0.20,12.2%,33.9%,0.06
+Human-like,2.02,1.13,0.16,21.8%,39.3%,0.05
+
+"Survival: Aggressive 62.4%, Human-like 56.6%, Passive 31.9%, Random 22.7%; first player 40.6%, last player 43.7%"
+"Steal protection (once per Night), 4 players - 4 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,4.53,99.5%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,3.29,96.0%,A real Supply card left your hand because of another player
+Lost the Key,0.20,18.3%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.45,38.6%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.08,70.9%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,5.48,99.0%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.22,19.1%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.18,17.9%,Your turn ended with actions left: no move was possible
+Trades refused,2.86,64.8%,Your trade offer was turned down
+Hopeless last Day,0.17,16.6%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.27,27.4%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.27,27.5%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,3.0 actions by others for each of yours,-,About 8.4 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,3.26,2.42,0.13,30.0%,28.4%,0.24
+Passive,4.05,3.18,0.21,20.5%,32.3%,0.15
+Aggressive,4.69,3.53,0.25,7.8%,22.6%,0.17
+Human-like,6.10,4.04,0.22,8.2%,26.5%,0.16
+
+"Survival: Aggressive 37.2%, Human-like 32.5%, Passive 20.7%, Random 15.5%; first player 27.5%, last player 28.2%"
+"Steal protection (once per Night), 6 players - 6 players, 1000 games, forgetful players"
+What happened,Per player per game,Players it happened to,Meaning
+Had a card stolen,5.04,99.8%,Someone took one of your cards with Steal
+Lost real Supply to a Steal or Swap,3.61,97.5%,A real Supply card left your hand because of another player
+Lost the Key,0.24,21.7%,You were holding the Key and someone (or an event) took it
+Hand scrambled,0.60,48.3%,"You lost 2+ real Supply at once to Swap Deck, Everyone Switches or Tornado"
+Real Supply lost to the Rondo,1.14,71.8%,"Hunger, Outbreak or Tornado took real Supply from you"
+Peeked cards lost,6.34,99.7%,Cards you had looked at were taken or scrambled away
+Turns lost to a Skip,0.14,12.7%,A whole turn gone because of a Skip card
+Turns with nothing to do,0.11,11.3%,Your turn ended with actions left: no move was possible
+Trades refused,3.36,64.3%,Your trade offer was turned down
+Hopeless last Day,0.14,13.6%,You started the last Day with 0-1 real Supply and no Key
+Collapsed at the end,0.43,43.2%,"You started the last Day able to survive, then lost"
+Lost with 3+ Supply,0.46,46.2%,You reached 3 real Supply and still lost (tie or bunker full)
+Waiting,5.0 actions by others for each of yours,-,About 14.1 min of waiting per game at 6 s per action
+By strategy (per player per game),Had a card stolen,Lost real Supply to Steal/Swap,Lost the Key,Hopeless last Day,Lost with 3+ Supply,Turns with nothing to do
+Random,3.79,2.69,0.16,30.3%,35.3%,0.16
+Passive,4.13,3.22,0.22,18.4%,44.1%,0.11
+Aggressive,5.74,4.09,0.25,7.1%,47.0%,0.10
+Human-like,5.53,3.89,0.27,8.6%,50.2%,0.10
+
