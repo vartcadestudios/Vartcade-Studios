@@ -8,7 +8,9 @@ namespace TDTS.UI
     /// <summary>
     /// Wires the Day and Night action buttons to GameManager for the local player and
     /// greys them out when it isn't your turn. Adds the buttons the scene doesn't have yet
-    /// (Pass, Accept/Decline trade, Night Play card) as copies of existing ones.
+    /// (Accept/Decline trade, Peek, Night Play card) as copies of existing ones.
+    /// There is no Pass. End turn stays hidden while actions are limited: every turn uses all its actions.
+    /// Scavenge is hidden too: you draw by tapping the draw pile.
     /// </summary>
     public class ActionBarController : MonoBehaviour
     {
@@ -22,10 +24,10 @@ namespace TDTS.UI
         [SerializeField] private Button swapButton;
         [SerializeField] private Button skipButton;
 
-        private Button passButton;
         private Button acceptButton;
         private Button declineButton;
         private Button nightPlayButton;
+        private Button peekButton;
         private TextMeshProUGUI declineLabel;
 
         private void Start()
@@ -33,24 +35,27 @@ namespace TDTS.UI
             // Style first, so the copies made below come out matching
             foreach (Button button in new[] { tradeButton, scavengeButton, playCardButton, stealButton, swapButton })
                 Style(button, SundownArt.ButtonColor);
-            Style(skipButton, SundownArt.AccentColor); // ending your Night turn is the main move
+            Style(skipButton, SundownArt.AccentColor);
 
             IGameView gm = GameView.Current;
             if (gm == null) return;
 
-            tradeButton.onClick.AddListener(gm.TradeSelectedForLocalPlayer);
+            Transform canvas = stealButton.GetComponentInParent<Canvas>().rootCanvas.transform;
+            tradeButton.onClick.AddListener(() => CardPicker.OpenTrade(canvas, gm));
             scavengeButton.onClick.AddListener(gm.DrawForLocalPlayer);
             playCardButton.onClick.AddListener(gm.PlaySelectedForLocalPlayer);
-            Transform canvas = stealButton.GetComponentInParent<Canvas>().rootCanvas.transform;
-            stealButton.onClick.AddListener(() => StealPicker.Open(canvas, gm));
+            stealButton.onClick.AddListener(() => CardPicker.OpenSteal(canvas, gm));
             swapButton.onClick.AddListener(gm.SwapSelectedForLocalPlayer);
 
             // P11: at Night the old Skip button ends your turn
             skipButton.onClick.AddListener(gm.PassForLocalPlayer);
             SetLabel(skipButton, "End turn");
 
-            passButton = CopyOf(scavengeButton, "Pass", gm.PassForLocalPlayer);
             nightPlayButton = CopyOf(stealButton, "Play card", gm.PlaySelectedForLocalPlayer);
+            // Tapping a card at Night only picks it; this looks at the back of the picked card (1 action)
+            peekButton = CopyOf(stealButton, "Peek", () => gm.PeekForLocalPlayer(gm.SelectedCardIndex));
+            Style(peekButton, SundownArt.AccentColor);
+            peekButton.transform.SetSiblingIndex(stealButton.transform.GetSiblingIndex()); // first in the row
             acceptButton = CopyOf(scavengeButton, "Accept trade", () => gm.AnswerTradeForLocalPlayer(true));
             Style(acceptButton, SundownArt.AccentColor);
             declineButton = CopyOf(scavengeButton, "Decline", () => gm.AnswerTradeForLocalPlayer(false));
@@ -59,7 +64,22 @@ namespace TDTS.UI
             // The added buttons don't fit at their scene width, so let each row share its width out
             FitToRow(scavengeButton);
             FitToRow(stealButton);
+
+            // Flashlight results pop up on this device (offline, or the host's own seat).
+            // Online players get the same result as a line in their log.
+            flashlightCanvas = canvas;
+            if (GameManager.Instance != null) GameManager.Instance.OnLocalFlashlight += ShowFlashlight;
         }
+
+        private Transform flashlightCanvas;
+
+        private void OnDestroy()
+        {
+            if (GameManager.Instance != null) GameManager.Instance.OnLocalFlashlight -= ShowFlashlight;
+        }
+
+        private void ShowFlashlight(TDTS.Data.PlayerData target, System.Collections.Generic.List<TDTS.Data.CardData> lit) =>
+            CardPicker.OpenFlashlight(flashlightCanvas, target, lit, target == GameManager.Instance.LocalPlayer);
 
         private void Update()
         {
@@ -71,12 +91,16 @@ namespace TDTS.UI
             bool day = myTurn && gm.CurrentState == GameState.DayPhase;
             bool night = myTurn && gm.CurrentState == GameState.NightPhase;
             bool tradingOnly = gm.CurrentDayRule == DayRule.TradingOnly;
+            // No End turn: you use all your actions. It only shows when actions
+            // aren't limited (a testing switch), since then a turn would never end on its own.
+            bool canEndTurn = !gm.LimitActions;
 
-            // A trade offered to you replaces the Day buttons until you answer
+            // A trade offered to you replaces the Day buttons until you answer.
+            // There's no Scavenge button: tap the draw pile instead.
             tradeButton.gameObject.SetActive(!offeredToMe);
-            scavengeButton.gameObject.SetActive(!offeredToMe);
+            scavengeButton.gameObject.SetActive(false);
             playCardButton.gameObject.SetActive(!offeredToMe);
-            if (passButton != null) passButton.gameObject.SetActive(!offeredToMe);
+            skipButton.gameObject.SetActive(canEndTurn);
             if (acceptButton != null) acceptButton.gameObject.SetActive(offeredToMe);
             if (declineButton != null)
             {
@@ -85,14 +109,22 @@ namespace TDTS.UI
             }
 
             tradeButton.interactable = day;
-            scavengeButton.interactable = day && !tradingOnly;
             playCardButton.interactable = day && !tradingOnly && !PickedCardIsUnplayable(gm, true);
-            if (passButton != null) passButton.interactable = day;
 
-            stealButton.interactable = night;
-            swapButton.interactable = night;
+            // One Steal or Swap a night
+            stealButton.interactable = night && !gm.StoleOrSwappedThisTurn;
+            swapButton.interactable = night && !gm.StoleOrSwappedThisTurn;
             skipButton.interactable = night && gm.PeeksThisTurn > 0;
             if (nightPlayButton != null) nightPlayButton.interactable = night && !PickedCardIsUnplayable(gm, false);
+            if (peekButton != null) peekButton.interactable = night && !PickedCardIsPeeked(gm);
+        }
+
+        /// <summary>You already know the back of the card you picked (tap it at Night to see it again).</summary>
+        private static bool PickedCardIsPeeked(IGameView gm)
+        {
+            var hand = gm.LocalPlayer?.hand;
+            int index = gm.SelectedCardIndex;
+            return hand != null && index >= 0 && index < hand.Count && hand[index].peeked;
         }
 
         /// <summary>
@@ -105,7 +137,7 @@ namespace TDTS.UI
             int index = gm.SelectedCardIndex;
             if (hand == null || index < 0 || index >= hand.Count) return false;
             var card = hand[index];
-            return day ? !card.HasMorningFront : !(card.HasNightBack && card.peeked);
+            return day ? !card.HasMorningFront || card.frontUsed : !(card.HasNightBack && card.peeked);
         }
 
         /// <summary>A copy of an existing button, so new buttons match the row's style.</summary>

@@ -32,11 +32,17 @@ namespace TDTS.Data
                 pile.Add(card);
             }
 
-            // G2: pick 1 of the 4 Keys, the other 3 leave the game
+            // G2: pick 1 of the 4 Keys, the other 3 leave the game. A Key hides behind an ordinary
+            // Supply front (design 0-3 = Food, Water, Medicine, Entertainment), so nobody knows
+            // they're holding it until they peek.
             int keyInPlay = rng.Next(DeckRecipe.KeyDesigns);
             for (int i = 0; i < DeckRecipe.KeyDesigns; i++)
             {
-                var key = new CardData { front = FrontType.BunkerKey, back = BackType.BunkerKey, keyDesignIndex = i };
+                var key = new CardData
+                {
+                    front = FrontType.Supply, frontSupply = (SupplyKind)i,
+                    back = BackType.BunkerKey, keyDesignIndex = i,
+                };
                 if (i == keyInPlay) pile.Add(key);
                 else removedFromGame.Add(key);
             }

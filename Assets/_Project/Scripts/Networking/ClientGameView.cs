@@ -8,7 +8,7 @@ namespace TDTS.Networking
 {
     /// <summary>
     /// The table as an online client sees it. Holds only what the host's last SeatSnapshot said,
-    /// so other players are a name and a card count. Buttons become requests to the host, which
+    /// so other players are a name and the fronts of their cards. Buttons become requests to the host, which
     /// runs the rules and answers with a new snapshot. GameManager adds this on clients.
     /// </summary>
     public class ClientGameView : MonoBehaviour, IGameView
@@ -74,6 +74,7 @@ namespace TDTS.Networking
         public bool LimitActions => !hasSnapshot || snap.limitActions;
         public int ActionsLeft => snap.actionsLeft;
         public int PeeksThisTurn => snap.peeksThisTurn;
+        public bool StoleOrSwappedThisTurn => snap.stoleOrSwapped;
         public int TurnNumber => snap.turnNumber;
         public DayRule CurrentDayRule => snap.dayRule;
         public RondoResult? TodaysRondo => hasSnapshot && snap.rondo >= 0 ? (RondoResult)snap.rondo : (RondoResult?)null;
@@ -101,6 +102,7 @@ namespace TDTS.Networking
         public bool HasPendingTrade => hasSnapshot && snap.tradeFrom >= 0;
         public PlayerData TradeTo => HasPendingTrade ? Seat(snap.tradeTo) : null;
         public float TradeSecondsLeft => HasPendingTrade ? Mathf.Max(0f, tradeEndsAt - Time.time) : 0f;
+        public int TradeWantedIndex => HasPendingTrade ? snap.tradeWanted : -1;
 
         public PlayerData SelectedTarget => selectedTarget;
         public int SelectedCardIndex => selectedCardIndex;
@@ -136,6 +138,17 @@ namespace TDTS.Networking
             localPlayer = Seat(next.yourSeat);
             if (localPlayer != null && next.hand != null)
                 foreach (CardSnapshot card in next.hand) localPlayer.hand.Add(card.ToCard());
+
+            // Everyone else's hand holds just the fronts, which are public
+            int nextFront = 0;
+            for (int i = 0; i < count && next.fronts != null && next.handCounts != null && i < next.handCounts.Length; i++)
+            {
+                int cards = next.handCounts[i];
+                if (players[i] != localPlayer)
+                    for (int n = 0; n < cards && nextFront + n < next.fronts.Length; n++)
+                        players[i].hand.Add(next.fronts[nextFront + n].ToCard());
+                nextFront += cards;
+            }
 
             playLog.Clear();
             if (next.log != null) playLog.AddRange(next.log);
@@ -193,9 +206,9 @@ namespace TDTS.Networking
             if (Ready()) bridge.DrawRpc();
         }
 
-        public void TradeSelectedForLocalPlayer()
+        public void TradeSelectedForLocalPlayer(int wantedIndex)
         {
-            if (Ready()) bridge.OfferTradeRpc(selectedCardIndex, SeatOf(selectedTarget));
+            if (Ready()) bridge.OfferTradeRpc(selectedCardIndex, SeatOf(selectedTarget), wantedIndex);
         }
 
         public void PlaySelectedForLocalPlayer()
@@ -225,7 +238,7 @@ namespace TDTS.Networking
 
         public void AnswerTradeForLocalPlayer(bool accept)
         {
-            if (Ready()) bridge.AnswerTradeRpc(accept, selectedCardIndex);
+            if (Ready()) bridge.AnswerTradeRpc(accept);
         }
 
         // ---------- Picks stay on this device ----------

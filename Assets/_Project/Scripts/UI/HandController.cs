@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,8 +9,11 @@ using TDTS.Managers;
 namespace TDTS.UI
 {
     /// <summary>
-    /// Displays the local player's hand. Day: tap a card to pick it for Trade or Play card.
-    /// Night: tap a card you haven't seen to Peek (its back shows for a moment), or a peeked one to pick it.
+    /// Displays the local player's hand. Tap a card to pick it for Trade, Play card, Swap or Peek;
+    /// the Peek button then shows its back for a moment (Night, 1 action).
+    /// At Night, tapping a card you've already peeked at picks it and shows its back again.
+    /// When someone offers you a trade, the card they asked for is lifted and edged in gold.
+    /// There's no hand limit: slots are added as the hand grows, and cards overlap to fit the row.
     /// </summary>
     public class HandController : MonoBehaviour
     {
@@ -33,22 +37,29 @@ namespace TDTS.UI
         private Coroutine peekRoutine;
 
         // Built at runtime on top of the scene's slots
-        private TextMeshProUGUI[] typeLabels;
-        private GameObject[] peekedMarks;
+        private readonly List<CardSlotView> cards = new List<CardSlotView>();
+        private readonly List<TextMeshProUGUI> typeLabels = new List<TextMeshProUGUI>();
+        private readonly List<GameObject> peekedMarks = new List<GameObject>();
+        private GameObject slotTemplate; // an unstyled copy of the first scene slot
+        private List<int> backgroundPath, labelPath;
+        private float gap;
 
         private void Start()
         {
-            typeLabels = new TextMeshProUGUI[slots.Length];
-            peekedMarks = new GameObject[slots.Length];
-            for (int i = 0; i < slots.Length; i++)
-            {
-                int index = i; // capture a copy for the lambda
-                Button button = slots[i].root.GetComponent<Button>();
-                if (button == null) button = slots[i].root.AddComponent<Button>();
-                button.transition = Selectable.Transition.None;
-                button.onClick.AddListener(() => OnSlotClicked(index));
-                StyleSlot(i);
-            }
+            // Copy a slot before styling, so new slots go through the same styling as the scene's.
+            // Styling adds children, so note where the name and background sit first.
+            slotTemplate = Instantiate(slots[0].root, transform);
+            slotTemplate.name = "CardSlotTemplate";
+            slotTemplate.SetActive(false);
+            backgroundPath = PathTo(slots[0].background.transform, slots[0].root.transform);
+            labelPath = PathTo(slots[0].label.transform, slots[0].root.transform);
+
+            // The hand row places its own cards from here on, so they can overlap when the hand is big
+            var row = GetComponent<HorizontalLayoutGroup>();
+            gap = row != null ? row.spacing : 20f;
+            if (row != null) row.enabled = false;
+
+            foreach (CardSlotView slot in slots) AddSlot(slot);
 
             if (GameView.Current == null) return;
 
@@ -81,17 +92,95 @@ namespace TDTS.UI
             if (me == null || index >= me.hand.Count) return;
 
             CardData card = me.hand[index];
-            GameState state = GameView.Current.CurrentState;
 
-            // Night: tapping a card you haven't seen is a Peek (costs 1 action).
-            // Any other tap picks the card for Trade, Swap or Play card.
-            if (state == GameState.NightPhase && !card.peeked)
+            // A tap only picks the card, for Peek, Trade, Swap or Play card. Peeking is its own button.
+            GameView.Current.SelectCard(index);
+
+            // You already know this card's back, so at Night you can look at it again for free.
+            // By day it stays hidden: learning a back takes a Night action.
+            if (card.peeked && GameView.Current.CurrentState == GameState.NightPhase) Peek(index);
+        }
+
+        /// <summary>The card of yours someone asked for in a trade waiting on your answer, or -1.</summary>
+        private static int AskedForIndex()
+        {
+            IGameView view = GameView.Current;
+            return view.HasPendingTrade && view.TradeTo == view.LocalPlayer ? view.TradeWantedIndex : -1;
+        }
+
+        /// <summary>Hooks up and styles one card slot.</summary>
+        private void AddSlot(CardSlotView slot)
+        {
+            int index = cards.Count; // capture a copy for the lambda
+            cards.Add(slot);
+
+            Button button = slot.root.GetComponent<Button>();
+            if (button == null) button = slot.root.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            button.onClick.AddListener(() => OnSlotClicked(index));
+
+            // Centre pivot, so a picked card grows evenly from its middle
+            var rect = (RectTransform)slot.root.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+
+            typeLabels.Add(null);
+            peekedMarks.Add(null);
+            StyleSlot(index);
+        }
+
+        /// <summary>More cards than slots: add copies of the scene's slot.</summary>
+        private void EnsureSlots(int count)
+        {
+            while (cards.Count < count)
             {
-                GameView.Current.PeekForLocalPlayer(index); // OnLocalPeek flashes the back once it goes through
-                return;
+                GameObject root = Instantiate(slotTemplate, transform);
+                root.name = $"CardSlot{cards.Count + 1}";
+                root.SetActive(true);
+                AddSlot(new CardSlotView
+                {
+                    root = root,
+                    background = Follow(root.transform, backgroundPath).GetComponent<Image>(),
+                    label = Follow(root.transform, labelPath).GetComponent<TextMeshProUGUI>(),
+                });
+            }
+        }
+
+        /// <summary>Child indexes leading from root down to target.</summary>
+        private static List<int> PathTo(Transform target, Transform root)
+        {
+            var path = new List<int>();
+            for (Transform t = target; t != root; t = t.parent) path.Insert(0, t.GetSiblingIndex());
+            return path;
+        }
+
+        private static Transform Follow(Transform root, List<int> path)
+        {
+            foreach (int i in path) root = root.GetChild(i);
+            return root;
+        }
+
+        /// <summary>
+        /// Lines the cards up from the left. When they don't fit, they overlap more and more,
+        /// and the picked or peeked card comes to the front so you can read it.
+        /// </summary>
+        private void LayOutCards(int count)
+        {
+            if (count == 0) return;
+            float width = ((RectTransform)cards[0].root.transform).rect.width;
+            float room = ((RectTransform)transform).rect.width;
+            float step = count > 1 ? Mathf.Min(width + gap, (room - width) / (count - 1)) : 0f;
+
+            for (int i = 0; i < count; i++)
+            {
+                var rect = (RectTransform)cards[i].root.transform;
+                rect.anchoredPosition = new Vector2(width / 2f + i * step, 0f);
+                rect.SetSiblingIndex(i);
             }
 
-            GameView.Current.SelectCard(index);
+            int front = peekIndex >= 0 && peekIndex < count ? peekIndex
+                : AskedForIndex() >= 0 ? AskedForIndex() : GameView.Current.SelectedCardIndex;
+            if (front >= 0 && front < count) cards[front].root.transform.SetAsLastSibling();
         }
 
         private void Peek(int index)
@@ -123,7 +212,7 @@ namespace TDTS.UI
         /// </summary>
         private void StyleSlot(int i)
         {
-            CardSlotView slot = slots[i];
+            CardSlotView slot = cards[i];
             SundownArt.Rounded(slot.background, slot.background.color, 12);
 
             var band = SundownArt.NewRect("TypeBand", slot.root.transform, Vector2.zero, new Vector2(1f, 0.3f),
@@ -174,11 +263,13 @@ namespace TDTS.UI
         private void Refresh()
         {
             PlayerData me = GameView.Current.LocalPlayer;
+            int count = me?.hand.Count ?? 0;
+            EnsureSlots(count);
 
-            for (int i = 0; i < slots.Length; i++)
+            for (int i = 0; i < cards.Count; i++)
             {
                 bool hasCard = me != null && i < me.hand.Count;
-                slots[i].root.SetActive(hasCard);
+                cards[i].root.SetActive(hasCard);
                 if (!hasCard) continue;
 
                 CardData card = me.hand[i];
@@ -187,17 +278,20 @@ namespace TDTS.UI
                 // The owner always sees the front; the back only while peeking.
                 // Colours match the Card Gallery (CardView).
                 Color color = CardView.ColorFor(card, revealed);
-                slots[i].background.color = color;
-                slots[i].label.color = typeLabels[i].color = CardView.TextColorOn(color);
-                slots[i].label.text = revealed ? card.BackName : card.FrontName;
-                typeLabels[i].text = revealed ? $"BACK · {CardView.TypeName(card, true)}" : CardView.TypeName(card, false);
+                cards[i].background.color = color;
+                cards[i].label.color = typeLabels[i].color = CardView.TextColorOn(color);
+                cards[i].label.text = revealed ? card.BackName : card.FrontName;
+                typeLabels[i].text = revealed ? $"BACK · {CardView.TypeName(card, true)}"
+                    : card.HasMorningFront && card.frontUsed ? "MORNING ACTION · USED"
+                    : CardView.TypeName(card, false);
                 // Spec C6: a peeked card only shows a marker, not its back
                 peekedMarks[i].SetActive(card.peeked && !revealed);
 
-                // The card picked for Trade / Play card lifts a little and gets a gold edge
-                bool picked = i == GameView.Current.SelectedCardIndex;
-                slots[i].root.transform.localScale = picked ? new Vector3(1.08f, 1.08f, 1f) : Vector3.one;
-                Outline outline = slots[i].root.GetComponent<Outline>();
+                // The card picked for Trade / Play card, or asked for in a trade offered to you,
+                // lifts a little and gets a gold edge
+                bool picked = i == GameView.Current.SelectedCardIndex || i == AskedForIndex();
+                cards[i].root.transform.localScale = picked ? new Vector3(1.08f, 1.08f, 1f) : Vector3.one;
+                Outline outline = cards[i].root.GetComponent<Outline>();
                 if (outline != null)
                 {
                     outline.enabled = picked;
@@ -206,6 +300,7 @@ namespace TDTS.UI
                 }
             }
 
+            LayOutCards(count);
             MatchNameSizes();
         }
 
@@ -217,13 +312,13 @@ namespace TDTS.UI
         private void MatchNameSizes()
         {
             const float floor = 16f, ceiling = 22f;
-            var fits = new float[slots.Length];
+            var fits = new float[cards.Count];
             float shared = ceiling;
 
-            for (int i = 0; i < slots.Length; i++)
+            for (int i = 0; i < cards.Count; i++)
             {
-                if (!slots[i].root.activeInHierarchy) continue;
-                TextMeshProUGUI name = slots[i].label;
+                if (!cards[i].root.activeInHierarchy) continue;
+                TextMeshProUGUI name = cards[i].label;
                 name.enableAutoSizing = true;
                 name.fontSizeMin = 10f;
                 name.fontSizeMax = ceiling;
@@ -233,11 +328,11 @@ namespace TDTS.UI
             }
 
             shared = Mathf.Max(shared, floor);
-            for (int i = 0; i < slots.Length; i++)
+            for (int i = 0; i < cards.Count; i++)
             {
-                if (!slots[i].root.activeInHierarchy) continue;
-                slots[i].label.enableAutoSizing = false;
-                slots[i].label.fontSize = Mathf.Min(shared, fits[i]);
+                if (!cards[i].root.activeInHierarchy) continue;
+                cards[i].label.enableAutoSizing = false;
+                cards[i].label.fontSize = Mathf.Min(shared, fits[i]);
             }
         }
     }

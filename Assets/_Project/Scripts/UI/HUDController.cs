@@ -47,6 +47,7 @@ namespace TDTS.UI
             if (oldBackground != null) oldBackground.enabled = false;
 
             Build();
+            gameObject.AddComponent<TurnBanner>(); // "YOUR TURN" popup
         }
 
         // ---------- Building ----------

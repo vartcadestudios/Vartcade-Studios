@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using TDTS.Data;
 using TDTS.Managers;
 using static TDTS.UI.SundownArt;
 
 namespace TDTS.UI
 {
     /// <summary>
-    /// Pop-up screens shared by the Main menu and the in-game menu: How to play and Settings.
+    /// Pop-up screens shared by the Main menu and the in-game menu: How to play, Settings and Profile.
     /// Each one dims what's behind it and closes itself with its own button.
     /// </summary>
     public static class MenuScreens
@@ -23,29 +24,34 @@ namespace TDTS.UI
         private static readonly (string tab, string title, string body)[] Pages =
         {
             ("Goal", "Make it to the bunker",
-                "The sun sets in <b>ten days</b>. When it does, the bunker has only <b>two seats</b>.\n\n" +
-                "Whoever holds the <color=#FAC775><b>Bunker Key</b></color> gets a seat, no matter what.\n\n" +
-                "The other seats go to players holding at least <b>3 real Supply</b> cards, most Supply first. " +
+                "The sun sets in <b>ten days</b>. When it does, the bunker has only <b>two seats</b> (three with 5 or 6 players).\n\n" +
+                "Whoever holds the <color=#FAC775><b>Bunker Key</b></color> gets a seat, no matter what. " +
+                "It hides on the <b>back</b> of an ordinary Supply card, so you may not know who has it... even if it's you.\n\n" +
+                "The other seats go to players holding <b>3 different kinds</b> of real Supply (Food, Water, Medicine, Entertainment), most kinds first. " +
                 "Everyone else is left outside when the light goes."),
 
             ("Your cards", "Every card has two faces",
-                "You can always see the <b>front</b> of your own cards: Food, Water, Medicine, an action, or a Key.\n\n" +
+                "You can always see the <b>front</b> of your own cards: Food, Water, Medicine, Entertainment, or an action.\n\n" +
                 "The <b>back</b> is what really counts, and you can't see it until you <b>peek</b>. " +
-                "A Food front might hide <b>real Supply</b>... or worthless <b>Trash</b>.\n\n" +
-                "Peeked cards get a <color=#FFD54A><b>gold dot</b></color>. Other players only ever see your cards face down. " +
-                "You can hold up to <b>6</b> cards."),
+                "A Food front might hide <b>real Supply</b>, worthless <b>Trash</b>... or the <b>Bunker Key</b>.\n\n" +
+                "Peeked cards get a <color=#FFD54A><b>gold dot</b></color>. At Night, tap one to see its back again; by day it stays hidden. " +
+                "Everyone can always see the <b>fronts</b> of everyone's cards; only backs are secret. " +
+                "There's <b>no limit</b> to how many cards you can hold."),
 
             ("Day", "Day: eyes open, one action",
                 "Players take turns in order. On your turn, do <b>one</b> of these:\n\n" +
-                "<b>Trade</b>  Pick one of your cards and tap a player. They choose a card to give back, or turn you down.\n" +
-                "<b>Scavenge</b>  Draw the top card of the pile.\n" +
-                "<b>Play card</b>  Play a <b>Morning Action</b> card, like Swap Deck or Reverse Turn.\n" +
-                "<b>Pass</b>  Do nothing and keep your cards close."),
+                "<b>Trade</b>  Pick one of your cards, tap a player, then choose which of their cards you want. They accept or refuse.\n" +
+                "<b>Scavenge</b>  Tap the draw pile to draw its top card.\n" +
+                "<b>Play card</b>  Play a <b>Morning Action</b> card, like Swap Deck or Reverse Turn. Each one works once, " +
+                "and the card stays in your hand, so its back still counts.\n\n" +
+                "There's no passing: your turn ends once you've made your move."),
 
             ("Night", "Night: eyes closed, two actions",
-                "Everyone closes their eyes. You get <b>two</b> actions, and one of them <b>must be a peek</b>.\n\n" +
-                "<b>Peek</b>  Tap one of your unseen cards to learn its back.\n" +
-                "<b>Steal</b>  Tap a player, then <b>choose</b> one of their face-down cards to take.\n" +
+                "Everyone closes their eyes. You get <b>two</b> actions, and <b>one must be a Peek</b>. " +
+                "So each Night: peek at one of your cards, then <b>Steal, Swap, peek again, or play a Night card</b>. " +
+                "You can <b>Steal or Swap only once</b> a Night.\n\n" +
+                "<b>Peek</b>  Tap one of your cards, then press Peek to learn its back.\n" +
+                "<b>Steal</b>  Tap a player, then <b>choose</b> which of their cards to take.\n" +
                 "<b>Swap</b>  Give one of your cards for a random card of theirs.\n" +
                 "<b>Play card</b>  Play a <b>Night Action</b> you've peeked at, like the Flashlight.\n\n" +
                 "Everyone else only hears that <i>someone did something in the dark</i>."),
@@ -62,8 +68,9 @@ namespace TDTS.UI
                 "<b>Peaceful Day</b>  Nothing happens. Enjoy it."),
 
             ("Controls", "Playing on screen",
-                "<b>Tap a player</b> to target them for Trade, Steal, Swap or an action card.\n" +
-                "<b>Tap one of your cards</b> to pick it. At Night, tapping an unseen card peeks at it.\n" +
+                "<b>Tap a player</b> to see their cards close up and target them for Trade, Steal, Swap or an action card. " +
+                "Pick one of their cards and Trade, Steal or Swap right there.\n" +
+                "<b>Tap one of your cards</b> to pick it. At Night, press <b>Peek</b> to look at its back. At Night, tapping a peeked card shows its back again.\n" +
                 "<b>Tap the draw pile</b> to Scavenge.\n" +
                 "The <b>log</b> in the middle tells you what just happened and how many actions you have left.\n\n" +
                 "Press <b>Esc</b> any time for the menu, these rules and the settings.\n\n" +
@@ -167,6 +174,165 @@ namespace TDTS.UI
             MakeButton(done, "Done", AccentColor, () => Close(overlay, onClose), 24);
 
             return overlay.gameObject;
+        }
+
+        // ---------- Profile ----------
+
+        private static readonly Color TileColor = new Color32(0x1A, 0x1E, 0x2E, 255);
+        private static readonly Color WinColor = new Color32(0x5F, 0xB8, 0x7A, 255);
+        private static readonly Color LossColor = new Color32(0xD9, 0x5B, 0x5B, 255);
+        private static readonly Color NoGameColor = new Color32(0x2A, 0x31, 0x45, 255);
+
+        // Avatar colours, picked from your name so it stays the same game to game
+        private static readonly Color[] AvatarColors =
+        {
+            new Color32(0xE0, 0x7A, 0x2E, 255), new Color32(0x4F, 0x8F, 0xD9, 255), new Color32(0x5F, 0xB8, 0x7A, 255),
+            new Color32(0xB5, 0x6C, 0xD6, 255), new Color32(0xD9, 0x5B, 0x6A, 255), new Color32(0xD6, 0xB8, 0x4A, 255),
+        };
+
+        /// <summary>The name you play under (the one you type in the Lobby).</summary>
+        public static string ProfileName
+        {
+            get
+            {
+                string name = Networking.SessionManager.SavedPlayerName;
+                return string.IsNullOrWhiteSpace(name) ? "You" : name.Trim();
+            }
+        }
+
+        public static Color AvatarColor(string name)
+        {
+            int hash = 0;
+            foreach (char c in name) hash = hash * 31 + c;
+            return AvatarColors[Mathf.Abs(hash) % AvatarColors.Length];
+        }
+
+        /// <summary>A round badge with your initial.</summary>
+        public static RectTransform Avatar(Transform parent, string name, float size)
+        {
+            var avatar = NewRect("Avatar", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            avatar.sizeDelta = new Vector2(size, size);
+            Image disc = avatar.gameObject.AddComponent<Image>();
+            disc.sprite = CircleSprite();
+            disc.color = AvatarColor(name);
+            disc.raycastTarget = false;
+            var initial = SundownFonts.UseTitle(NewText("Initial", avatar, size * 0.5f, FontStyles.Normal,
+                TextAlignmentOptions.Center, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero));
+            initial.text = name.Substring(0, 1).ToUpperInvariant();
+            initial.color = PanelColor;
+            return avatar;
+        }
+
+        /// <summary>Your record on this device: games, wins, streaks and your last ten results.</summary>
+        public static GameObject Profile(Transform canvas, Action onClose = null)
+        {
+            PlayerProfile profile = PlayerProfile.Current;
+            string name = ProfileName;
+
+            RectTransform overlay = Overlay("Profile", canvas);
+            var panel = NewPanel("Panel", overlay, new Vector2(-560f, -380f), new Vector2(560f, 380f));
+
+            // Who you are
+            RectTransform avatar = Avatar(panel, name, 120f);
+            avatar.anchorMin = avatar.anchorMax = new Vector2(0f, 1f);
+            avatar.anchoredPosition = new Vector2(56f + 60f, -56f - 60f);
+
+            var title = SundownFonts.UseTitle(NewText("Name", panel, 60, FontStyles.Normal, TextAlignmentOptions.BottomLeft,
+                new Vector2(0f, 1f), Vector2.one, new Vector2(200f, -120f), new Vector2(-56f, -40f)));
+            title.text = name.ToUpperInvariant();
+            title.color = TextColor;
+
+            var since = NewText("Since", panel, 22, FontStyles.Normal, TextAlignmentOptions.TopLeft,
+                new Vector2(0f, 1f), Vector2.one, new Vector2(202f, -170f), new Vector2(-56f, -124f));
+            since.text = profile.gamesPlayed == 0
+                ? "No games yet. Your record starts with your first Sundown."
+                : $"Playing since {profile.firstPlayed}  ·  last game {profile.lastPlayed}";
+            since.color = MutedText;
+
+            // The numbers, two rows of four
+            var grid = NewRect("Stats", panel, new Vector2(0f, 1f), Vector2.one, new Vector2(56f, -440f), new Vector2(-56f, -200f));
+            var layout = grid.gameObject.AddComponent<GridLayoutGroup>();
+            layout.cellSize = new Vector2(236f, 112f);
+            layout.spacing = new Vector2(12f, 12f);
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = 4;
+
+            Tile(grid, profile.gamesPlayed.ToString(), "GAMES PLAYED", TextColor);
+            Tile(grid, profile.wins.ToString(), "MADE IT INSIDE", WinColor);
+            Tile(grid, profile.gamesPlayed == 0 ? "-" : $"{Mathf.RoundToInt(profile.WinRate * 100f)}%", "WIN RATE", TextColor);
+            Tile(grid, profile.currentStreak.ToString(), "CURRENT STREAK", AccentColor);
+            Tile(grid, profile.longestStreak.ToString(), "LONGEST STREAK", AccentColor);
+            Tile(grid, profile.keyWins.ToString(), "WINS WITH THE KEY", new Color32(0xFA, 0xC7, 0x75, 255));
+            Tile(grid, profile.bestSupply.ToString(), "MOST REAL SUPPLY", TextColor);
+            Tile(grid, profile.onlineGames.ToString(), "ONLINE GAMES", TextColor);
+
+            // Last ten games, oldest on the left
+            var caption = NewText("RecentLabel", panel, 18, FontStyles.Bold, TextAlignmentOptions.Left,
+                new Vector2(0f, 1f), Vector2.one, new Vector2(56f, -490f), new Vector2(-56f, -460f));
+            caption.text = $"LAST {PlayerProfile.HistoryLength} GAMES";
+            caption.characterSpacing = 12f;
+            caption.color = MutedText;
+
+            var dots = NewRect("Recent", panel, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(56f, -540f), new Vector2(600f, -500f));
+            for (int i = 0; i < PlayerProfile.HistoryLength; i++)
+            {
+                int index = i - (PlayerProfile.HistoryLength - profile.recent.Count);
+                Color color = index < 0 ? NoGameColor : profile.recent[index] ? WinColor : LossColor;
+                var dot = NewRect("Game", dots, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero);
+                dot.sizeDelta = new Vector2(30f, 30f);
+                dot.anchoredPosition = new Vector2(15f + i * 42f, 0f);
+                Image image = dot.gameObject.AddComponent<Image>();
+                image.sprite = CircleSprite();
+                image.color = color;
+                image.raycastTarget = false;
+            }
+            var legend = NewText("Legend", panel, 18, FontStyles.Normal, TextAlignmentOptions.MidlineLeft,
+                new Vector2(0f, 1f), Vector2.one, new Vector2(500f, -540f), new Vector2(-56f, -500f));
+            legend.text = "<color=#5FB87A>Green</color> made it inside    <color=#D95B5B>Red</color> left outside";
+            legend.color = MutedText;
+
+            // Reset asks twice; Done closes
+            var footer = NewRect("Footer", panel, Vector2.zero, new Vector2(1f, 0f), new Vector2(56f, 36f), new Vector2(-56f, 100f));
+            var buttons = footer.gameObject.AddComponent<HorizontalLayoutGroup>();
+            buttons.spacing = 14f;
+            buttons.childControlWidth = buttons.childControlHeight = true;
+            buttons.childForceExpandWidth = buttons.childForceExpandHeight = true;
+
+            Button reset = null;
+            bool armed = false;
+            reset = MakeButton(footer, "Reset stats", ButtonColor, () =>
+            {
+                if (!armed)
+                {
+                    armed = true;
+                    reset.GetComponentInChildren<TextMeshProUGUI>().text = "Tap again to erase";
+                    reset.colors = Tints(LossColor);
+                    return;
+                }
+                PlayerProfile.Reset();
+                Close(overlay, null);
+                Profile(canvas, onClose); // show the fresh, empty record
+            }, 22);
+            MakeButton(footer, "Done", AccentColor, () => Close(overlay, onClose), 24);
+
+            return overlay.gameObject;
+        }
+
+        private static void Tile(Transform grid, string value, string label, Color valueColor)
+        {
+            var tile = NewRect(label, grid, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            Rounded(tile.gameObject.AddComponent<Image>(), TileColor, 16).raycastTarget = false;
+
+            var number = SundownFonts.UseTitle(NewText("Value", tile, 52, FontStyles.Normal, TextAlignmentOptions.Center,
+                new Vector2(0f, 0.36f), Vector2.one, new Vector2(8f, 0f), new Vector2(-8f, -6f)));
+            number.text = value;
+            number.color = valueColor;
+
+            var caption = NewText("Label", tile, 15, FontStyles.Bold, TextAlignmentOptions.Center,
+                Vector2.zero, new Vector2(1f, 0.36f), new Vector2(8f, 8f), new Vector2(-8f, 0f));
+            caption.text = label;
+            caption.characterSpacing = 8f;
+            caption.color = MutedText;
         }
 
         // ---------- Pieces ----------

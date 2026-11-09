@@ -34,6 +34,9 @@ namespace TDTS.UI
         private float spinFrom, spinTo, spinStartedAt;
         private RondoResult? landed;
 
+        /// <summary>The wheel is still spinning. Its banner, named "RondoBanner", follows straight after.</summary>
+        public bool IsAnnouncing => spinning;
+
         private static int Count => Enum.GetValues(typeof(RondoResult)).Length;
         private static float WedgeAngle => 360f / Count;
 
@@ -68,7 +71,7 @@ namespace TDTS.UI
         public static string Effect(RondoResult result) => result switch
         {
             RondoResult.Purge => "5 cards burn off the draw pile for good.",
-            RondoResult.TradingOnly => "No Scavenge and no action cards today. Trade or pass.",
+            RondoResult.TradingOnly => "No Scavenge and no action cards today. Trade if you can.",
             RondoResult.HungerDisaster => "Everyone loses a real Food.",
             RondoResult.Tornado => "Every hand is shuffled together and dealt back out.",
             RondoResult.DoomsdayClock => "Sundown comes a day sooner.",

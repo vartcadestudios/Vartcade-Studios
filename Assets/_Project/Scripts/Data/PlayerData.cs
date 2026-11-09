@@ -29,6 +29,23 @@ namespace TDTS.Data
 
         // Spec V15
         public int RealSupplyCount => hand.FindAll(c => c.IsRealSupply).Count;
+
+        /// <summary>How many different kinds of real Supply (Food, Water, Medicine, Entertainment) you hold. You need 3 to qualify.</summary>
+        public int SupplyKinds
+        {
+            get
+            {
+                int mask = 0;
+                foreach (CardData c in hand)
+                    if (c.IsRealSupply) mask |= 1 << (int)c.backSupply;
+                int kinds = 0;
+                for (; mask != 0; mask &= mask - 1) kinds++;
+                return kinds;
+            }
+        }
+
+        /// <summary>Rank for a bunker seat: more different kinds first, then more real Supply in total.</summary>
+        public int SupplyRank => SupplyKinds * 100 + RealSupplyCount;
         public bool HoldsKey => hand.Exists(c => c.IsKey);
     }
 }

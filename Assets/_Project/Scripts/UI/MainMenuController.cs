@@ -2,13 +2,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TDTS.Data;
 using static TDTS.UI.SundownArt;
 
 namespace TDTS.UI
 {
     /// <summary>
     /// The title screen: the sundown sky, the game's name, a fan of cards, and Play, How to play,
-    /// Settings and Quit. Builds its own UI at runtime and hides the scene's older canvas.
+    /// Settings and Quit, plus your profile badge in the corner. Builds its own UI at runtime and hides the scene's older canvas.
     /// Attach to an empty "MainMenuController" GameObject in the MainMenu scene.
     /// </summary>
     public class MainMenuController : MonoBehaviour
@@ -22,6 +23,7 @@ namespace TDTS.UI
 
         private Transform canvas;
         private RectTransform fan;
+        private RectTransform profileBadge;
 
         private void Start()
         {
@@ -30,6 +32,7 @@ namespace TDTS.UI
             canvas = SkyCanvas(transform);
             BuildColumn();
             BuildCardFan();
+            BuildProfileBadge();
         }
 
         // A slow sway, like cards held in a tired hand
@@ -43,6 +46,8 @@ namespace TDTS.UI
         public void OnHowToPlayPressed() => MenuScreens.HowToPlay(canvas);
 
         public void OnSettingsPressed() => MenuScreens.Settings(canvas);
+
+        public void OnProfilePressed() => MenuScreens.Profile(canvas, BuildProfileBadge); // a reset shows straight away
 
         public void OnQuitPressed()
         {
@@ -136,6 +141,37 @@ namespace TDTS.UI
             return label;
         }
 
+
+        // ---------- Profile badge ----------
+
+        /// <summary>Top right: your initial, name and streak. Tap it to open your profile.</summary>
+        private void BuildProfileBadge()
+        {
+            if (profileBadge != null) Destroy(profileBadge.gameObject);
+            PlayerProfile profile = PlayerProfile.Current;
+            string name = MenuScreens.ProfileName;
+
+            profileBadge = NewRect("ProfileBadge", canvas, Vector2.one, Vector2.one, new Vector2(-460f, -132f), new Vector2(-48f, -48f));
+            Image background = Rounded(profileBadge.gameObject.AddComponent<Image>(), Color.white, 20);
+            var button = profileBadge.gameObject.AddComponent<Button>();
+            button.targetGraphic = background;
+            button.colors = Tints(new Color(PanelColor.r, PanelColor.g, PanelColor.b, 0.85f));
+            button.onClick.AddListener(OnProfilePressed);
+
+            RectTransform avatar = MenuScreens.Avatar(profileBadge, name, 58f);
+            avatar.anchorMin = avatar.anchorMax = new Vector2(0f, 0.5f);
+            avatar.anchoredPosition = new Vector2(14f + 29f, 0f);
+
+            var title = NewText("Name", profileBadge, 26, FontStyles.Bold, TextAlignmentOptions.BottomLeft,
+                new Vector2(0f, 0.5f), Vector2.one, new Vector2(88f, 0f), new Vector2(-16f, -8f));
+            title.text = name;
+            title.color = TextColor;
+
+            var stats = NewText("Stats", profileBadge, 18, FontStyles.Normal, TextAlignmentOptions.TopLeft,
+                Vector2.zero, new Vector2(1f, 0.5f), new Vector2(88f, 6f), new Vector2(-16f, -2f));
+            stats.text = profile.gamesPlayed == 0 ? "<color=#A9AEBD>View profile</color>"
+                : $"<color=#E07A2E><b>{profile.currentStreak}</b> streak</color><color=#A9AEBD>   ·   best {profile.longestStreak}   ·   {profile.wins} wins</color>";
+        }
         /// <summary>Five face-down cards fanned out over the setting sun.</summary>
         private void BuildCardFan()
         {

@@ -1,0 +1,128 @@
+TEN DAYS TO SUNDOWN - KEY TEST RESULTS
+======================================
+Balance Simulator, 1,000 games per setup, 4 players unless noted.
+All tests: 20 + 20 deck, 3 different Supply kinds to qualify, kept Morning cards,
+catch-up draw, 3 bunker seats at 5-6 players, forgetful (casual) players.
+
+New rules      = 1 Night action, all peeks free
+Previous rules = 2 Night actions, each peek costs 1 action
+
+Key cases:
+  Normal        = Key shuffled into the top half of the draw pile (the game)
+  Key drawn     = one player is dealt the Key at the start
+  Key discarded = the Key is face up in the discard pile from the start
+  Key not drawn = the Key is at the bottom of the draw pile
+
+(Tables line up best in a monospace font, e.g. Notepad.)
+
+
+WHAT NORMALLY HAPPENS TO THE KEY
+--------------------------------
+In a player's hand at Sundown ...... 96% of games
+Removed by Purge ...................  4% of games
+Never drawn ........................ about 1 game in 1,000
+
+
+TABLE 1 - NEW RULES, 4 PLAYERS
+------------------------------
+Key case        Survivors  Nobody   Aggr.  Human  Passive  Random  Skill gap  Got in by Key  Under 3 kinds
+                per game   survives                                 (pts)      (of survivors) (of players)
+Normal            1.84      0.3%    51.4%  52.3%   44.4%   36.2%     16.1         51.8%          26.0%
+Key drawn         1.87      0.0%    51.6%  51.8%   47.0%   36.3%     15.5         53.6%          25.4%
+Key discarded     1.74      3.1%    52.7%  45.8%   41.7%   33.3%     19.4          0.0%          31.0%
+Key not drawn     1.74      3.1%    52.7%  45.8%   41.7%   33.3%     19.4          0.0%          31.0%
+
+
+TABLE 2 - PREVIOUS RULES, 4 PLAYERS
+-----------------------------------
+Key case        Survivors  Nobody   Aggr.  Human  Passive  Random  Skill gap
+                per game   survives                                 (pts)
+Normal            1.87      0.1%    57.9%  50.5%   42.9%   35.9%     22.0
+Key drawn         1.87      0.0%    57.0%  50.3%   40.3%   39.3%     17.7
+Key discarded     1.73      2.3%    56.0%  50.7%   35.5%   31.1%     24.9
+Key not drawn     1.73      2.3%    56.0%  50.7%   35.5%   31.1%     24.9
+
+
+TABLE 3 - NEW RULES, 6 PLAYERS (3 bunker seats)
+-----------------------------------------------
+Key case        Survivors   Aggr.  Human  Passive  Random  Skill gap  Got in by Key
+                per game                                    (pts)     (of survivors)
+Normal            2.73      46.9%  48.8%   46.6%   33.1%     15.7         36.6%
+Key drawn         2.73      47.7%  48.4%   46.9%   33.5%     14.9         36.6%
+Key discarded     2.61      44.8%  46.3%   44.0%   33.1%     13.2          0.0%
+Key not drawn     2.64      46.2%  46.9%   43.9%   33.7%     13.2          8.9%
+
+
+TABLE 4 - TURN ORDER (survival of first vs last player, 4 players)
+------------------------------------------------------------------
+Key case        New rules (first / last)   Previous rules (first / last)
+Normal              42.1% / 48.6%               43.7% / 48.4%
+Key drawn           46.4% / 48.3%               46.6% / 47.1%
+Key discarded       41.9% / 44.0%               41.5% / 43.5%
+Key not drawn       41.9% / 44.0%               41.5% / 43.5%
+
+
+TABLE 5 - FRUSTRATING MOMENTS, 4 PLAYERS
+----------------------------------------
+Counts are per player per game; rows marked % are the share of players.
+
+What happened                       New     New     New      Previous  Previous
+                                    Normal  Drawn   No Key   Normal    No Key
+Cards stolen                         4.28    4.37    4.22      4.71      4.69
+Real Supply lost to Steal/Swap       4.10    4.09    4.16      3.04      3.02
+Lost the Key                         0.52    0.78    0.00      0.47      0.00
+Peeked cards taken away             10.16   10.24   10.55      6.42      6.58
+Real Supply lost to the Rondo        1.29    1.29    1.32      1.25      1.37
+Hand scrambled (lost 2+ at once)     0.48    0.49    0.54      0.50      0.56
+Turns lost to a Skip                 0.46    0.45    0.46      0.36      0.36
+Turns with nothing to do             0.20    0.20    0.19      0.19      0.19
+Trades refused                       3.30    3.33    3.36      2.84      2.82
+Hopeless last Day (%)                4.5%    5.0%    5.8%      4.5%      5.2%
+Collapsed at the end (%)            31.8%   31.3%   29.4%     31.1%     29.7%
+Had 3 kinds and still lost (%)      27.9%   27.9%   25.6%     29.7%     25.7%
+Waiting per game (6 s per action)   12.4m   12.4m   12.5m      8.4m      8.4m
+("No Key" = discarded and not drawn, which gave the same results at 4 players.)
+
+
+WHAT CHANGES WITH THE KEY
+-------------------------
+Key drawn (dealt at start):
+- Almost the same as normal games, because the Key reaches a hand 96% of the time anyway.
+- Turn order is fairer (nobody gets the Key just by drawing more).
+- The Key changes hands more often (0.78 losses per player per game instead of 0.52).
+
+Key discarded or not drawn (no Key):
+- Fewer survivors, and nobody survives in about 3% of games instead of almost 0%.
+- More players fall short of 3 Supply kinds (31% instead of 26%).
+- More players are hopeless on the last Day (5.8% instead of 4.5%).
+- Skill matters more: the gap between best and worst strategy grows by about 3 points.
+- New rules: Human-like loses most. Previous rules: Passive loses most.
+- Discarded and not drawn give the same result at 4 players: the pile never runs out,
+  so a Key at the bottom never comes up. At 6 players it sometimes does.
+- The bots play the same whether or not they know the Key is gone. Real players who
+  know it was discarded would stop chasing it, so "discarded" may play a bit differently.
+
+
+NEW RULES vs PREVIOUS RULES
+---------------------------
+Different:
+- New rules are more balanced in every Key case (skill gap 15-19 instead of 18-25).
+  Passive does better, Aggressive does worse.
+- More cards lost: about 1 more real Supply per game to Swaps (4.1 vs 3.0), and about
+  4 more peeked cards taken away (10 vs 6.4), because people peek and Swap more.
+- More refused trades (3.3 vs 2.8) and more Skip turns (0.46 vs 0.36).
+- Longer waiting: about 12 min per game instead of 8 (fast peeking in the game would help).
+
+The same:
+- Stealing is still about 4-5 cards per player per game, the biggest frustration.
+- Rondo losses (about 1.3), scrambled hands (about 0.5), turns with nothing to do (about 0.2).
+- Endings: about 30% collapse at the end, 26-30% lose with 3 kinds, about 5% hopeless.
+- These match the earlier free-peek test (within about 3 points).
+
+
+BOTTOM LINE
+-----------
+- 1 Night action with free peeks is the more balanced rule set, whatever happens to the Key.
+- It costs more lost cards (Swaps) and a longer game.
+- Without the Key, fewer people survive and skill matters more.
+- Stealing is still the biggest frustration under both rule sets.

@@ -1,0 +1,21 @@
+﻿Ten Days to Sundown - the Key drawn / discarded / not drawn. NEW = 1 Night action + all peeks free; OLD = current game (2 Night actions, each peek costs 1). Both: 20+20 deck, 3 kinds, kept Morning cards, catch-up draw, 3 seats at 5-6 players, forgetful players.
+Rules,Key scenario,Games,Survivors per game,Nobody survived,Aggressive,Human-like,Passive,Random,Skill gap,1st player survived,Last player survived,Survivors who got in by the Key,Lost with 3 kinds (tie or full),Lost: under 3 kinds,Had a card stolen (per player per game),Lost real Supply to a Steal or Swap (per player per game),Lost the Key (per player per game),Hand scrambled (per player per game),Real Supply lost to the Rondo (per player per game),Peeked cards lost (per player per game),Turns lost to a Skip (per player per game),Turns with nothing to do (per player per game),Trades refused (per player per game),Hopeless last Day (players),Collapsed at the end (players),Lost with 3+ Supply (players),Waiting per player (6 s per action)
+NEW,"Normal (shuffled, top half)",1000,1.84,0.3%,51.4%,52.3%,44.4%,36.2%,16.1 pts,42.1%,48.6%,51.8%,27.9%,26.0%,4.28,4.10,0.52,0.48,1.29,10.16,0.46,0.20,3.30,4.5%,31.8%,27.9%,12.4 min
+NEW,Key drawn (dealt at start),1000,1.87,0.0%,51.6%,51.8%,47.0%,36.3%,15.5 pts,46.4%,48.3%,53.6%,27.9%,25.4%,4.37,4.09,0.78,0.49,1.29,10.24,0.45,0.20,3.33,5.0%,31.3%,27.9%,12.4 min
+NEW,Key discarded (out of the game),1000,1.74,3.1%,52.7%,45.8%,41.7%,33.3%,19.4 pts,41.9%,44.0%,0.0%,25.6%,31.0%,4.22,4.16,0.00,0.54,1.32,10.55,0.46,0.19,3.36,5.8%,29.4%,25.6%,12.5 min
+NEW,Key not drawn (bottom of pile),1000,1.74,3.1%,52.7%,45.8%,41.7%,33.3%,19.4 pts,41.9%,44.0%,0.0%,25.6%,31.0%,4.22,4.16,0.00,0.54,1.32,10.55,0.46,0.19,3.36,5.8%,29.4%,25.6%,12.5 min
+OLD,"Normal (shuffled, top half)",1000,1.87,0.1%,57.9%,50.5%,42.9%,35.9%,22.0 pts,43.7%,48.4%,51.5%,29.7%,23.5%,4.71,3.04,0.47,0.50,1.25,6.42,0.36,0.19,2.84,4.5%,31.1%,29.7%,8.4 min
+OLD,Key drawn (dealt at start),1000,1.87,0.0%,57.0%,50.3%,40.3%,39.3%,17.7 pts,46.6%,47.1%,53.5%,29.6%,23.7%,4.74,3.06,0.68,0.51,1.29,6.50,0.35,0.19,2.86,4.9%,31.7%,29.6%,8.4 min
+OLD,Key discarded (out of the game),1000,1.73,2.3%,56.0%,50.7%,35.5%,31.1%,24.9 pts,41.5%,43.5%,0.0%,25.7%,31.0%,4.69,3.02,0.00,0.56,1.37,6.58,0.36,0.19,2.82,5.2%,29.7%,25.7%,8.4 min
+OLD,Key not drawn (bottom of pile),1000,1.73,2.3%,56.0%,50.7%,35.5%,31.1%,24.9 pts,41.5%,43.5%,0.0%,25.7%,31.0%,4.69,3.02,0.00,0.56,1.37,6.58,0.36,0.19,2.82,5.2%,29.7%,25.7%,8.4 min
+NEW6,"Normal (shuffled, top half)",1000,2.73,0.0%,46.9%,48.8%,46.6%,33.1%,15.7 pts,43.2%,45.2%,36.6%,24.8%,29.8%,3.66,4.23,0.56,0.68,1.31,14.21,0.32,0.13,4.41,5.7%,28.3%,24.8%,22.6 min
+NEW6,Key drawn (dealt at start),1000,2.73,0.0%,47.7%,48.4%,46.9%,33.5%,14.9 pts,45.8%,44.4%,36.6%,24.0%,30.5%,3.68,4.24,0.67,0.67,1.30,14.23,0.32,0.13,4.39,6.4%,27.5%,24.0%,22.6 min
+NEW6,Key discarded (out of the game),1000,2.61,0.3%,44.8%,46.3%,44.0%,33.1%,13.2 pts,42.9%,42.9%,0.0%,20.5%,36.0%,3.61,4.29,0.00,0.69,1.34,14.32,0.33,0.14,4.61,7.8%,26.2%,20.5%,22.7 min
+NEW6,Key not drawn (bottom of pile),1000,2.64,0.3%,46.2%,46.9%,43.9%,33.7%,13.2 pts,42.5%,44.5%,8.9%,21.6%,34.3%,3.61,4.29,0.02,0.69,1.33,14.30,0.32,0.13,4.56,7.5%,26.6%,21.6%,22.7 min
+
+Normal games sorted by what happened to the Key (4 players)
+NEW natural,Held by a player at Sundown,955,1.85,0.0%,51.3%,53.2%,44.4%,36.1%,17.1 pts,42.1%,48.9%,54.0%,28.1%,25.7%,4.29,4.10,0.55,0.48,1.29,10.18,0.46,0.19,3.29,4.2%,31.8%,28.1%,12.4 min
+NEW natural,Removed by Purge,44,1.68,6.8%,54.5%,31.8%,43.2%,38.6%,15.9 pts,40.9%,40.9%,0.0%,25.0%,33.0%,4.11,4.20,0.00,0.46,1.27,9.82,0.57,0.20,3.36,10.2%,31.8%,25.0%,12.6 min
+NEW natural,Never drawn (still in the pile),1,2.00,0.0%,0.0%,100.0%,100.0%,0.0%,100.0 pts,100.0%,100.0%,0.0%,0.0%,50.0%,3.00,3.00,0.00,0.75,0.75,8.00,0.50,0.50,4.50,0.0%,0.0%,0.0%,11.6 min
+OLD natural,Held by a player at Sundown,964,1.88,0.0%,57.8%,50.4%,43.6%,36.1%,21.7 pts,43.9%,48.2%,53.2%,29.8%,23.3%,4.72,3.05,0.49,0.50,1.25,6.43,0.36,0.19,2.85,4.4%,31.1%,29.8%,8.4 min
+OLD natural,Removed by Purge,36,1.69,2.8%,61.1%,52.8%,25.0%,30.6%,30.6 pts,38.9%,52.8%,0.0%,27.8%,29.9%,4.45,2.74,0.00,0.47,1.17,6.14,0.40,0.16,2.60,5.6%,32.6%,27.8%,8.3 min

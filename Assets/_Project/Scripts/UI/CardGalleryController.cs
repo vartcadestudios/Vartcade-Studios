@@ -16,6 +16,7 @@ namespace TDTS.UI
     public class CardGalleryController : MonoBehaviour
     {
         [SerializeField] private DeckRecipe deckRecipe = new DeckRecipe();
+        [SerializeField] private CardSpread cardSpread = new CardSpread();
         [SerializeField] private Vector2 cardSize = new Vector2(112f, 150f);
         [SerializeField] private int columns = 15;
 
@@ -44,9 +45,11 @@ namespace TDTS.UI
             views.Clear();
 
             var removed = new List<CardData>();
-            List<CardData> cards = DeckBuilder.BuildDrawPile(deckRecipe, new System.Random(), removed);
+            List<CardData> cards = cardSpread.use
+                ? cardSpread.Build(deckRecipe.morningFronts, new System.Random(), removed)
+                : DeckBuilder.BuildDrawPile(deckRecipe, new System.Random(), removed);
 
-            // Morning fronts first, then Supply, then the Key; matching backs grouped inside each.
+            // Morning fronts first, then Supply (the Key among them); matching backs grouped inside each.
             IEnumerable<CardData> ordered = cards
                 .OrderBy(c => c.front == FrontType.MorningAction ? 0 : c.front == FrontType.Supply ? 1 : 2)
                 .ThenBy(c => c.front == FrontType.MorningAction ? (int)c.morningAction : (int)c.frontSupply)
@@ -63,7 +66,7 @@ namespace TDTS.UI
             summary.text =
                 $"{cards.Count} cards in play.   " +
                 $"Fronts: {Count(cards, c => c.front == FrontType.Supply)} Supply, " +
-                $"{Count(cards, c => c.HasMorningFront)} Morning, {Count(cards, c => c.front == FrontType.BunkerKey)} Key.   " +
+                $"{Count(cards, c => c.HasMorningFront)} Morning (the Key hides behind a Supply front).   " +
                 $"Backs: {Count(cards, c => c.IsRealSupply)} Supply, {Count(cards, c => c.back == BackType.Trash)} Trash, " +
                 $"{Count(cards, c => c.HasNightBack)} Night, {Count(cards, c => c.IsKey)} Key.   " +
                 "Tap a card to flip it.";

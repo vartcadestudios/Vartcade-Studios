@@ -8,7 +8,7 @@ namespace TDTS.Data
 
     public enum SupplyKind { Food, Water, Medicine, Entertainment }
 
-    // Spec 2.1: 18 Morning fronts across 5 variants
+    // 20 Morning fronts: 4 of each variant
     public enum MorningActionType
     {
         SwapDeck,         // Swap your whole hand with any player
@@ -18,10 +18,10 @@ namespace TDTS.Data
         EveryoneSwitches  // Everyone passes their hand along the turn order
     }
 
-    // Spec 2.1: 18 Night backs, 3 variants x 6
+    // 20 Night backs: 8 Flashlight, 6 Targeted Night Skip, 6 Targeted Day Skip
     public enum NightActionType
     {
-        Flashlight,        // 3 batteries: see the back of another player's card
+        Flashlight,        // One use: see the backs of every card in one hand, yours included
         TargetedNightSkip, // Skip a chosen player at night
         TargetedDaySkip    // Pick a player to skip the next Morning round
     }
@@ -29,8 +29,6 @@ namespace TDTS.Data
     [Serializable]
     public class CardData
     {
-        public const int FlashlightBatteries = 3;
-
         public FrontType front;
         public SupplyKind frontSupply;          // front == Supply only
         public MorningActionType morningAction; // front == MorningAction only
@@ -39,9 +37,9 @@ namespace TDTS.Data
         public SupplyKind backSupply;           // back == Supply only
         public NightActionType nightAction;     // back == NightAction only
 
-        public int keyDesignIndex;              // BunkerKey only: which of the 4 front designs (0-3)
-        public int batteries = FlashlightBatteries; // Flashlight only (spec V9)
+        public int keyDesignIndex;              // BunkerKey back only: which of the 4 Keys (0-3); its front is that Supply
         public bool peeked;                     // Spec V8: the owner has seen the back
+        public bool frontUsed;                  // A Morning front works once; the card stays in hand after
 
         public bool IsKey => back == BackType.BunkerKey;
         public bool IsRealSupply => back == BackType.Supply;

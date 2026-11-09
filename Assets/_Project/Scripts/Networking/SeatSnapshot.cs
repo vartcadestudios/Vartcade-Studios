@@ -14,12 +14,22 @@ namespace TDTS.Networking
         public SupplyKind frontSupply;
         public MorningActionType morningAction;
         public int keyDesignIndex;
+        public bool frontUsed;
 
         public bool peeked;
         public BackType back;
         public SupplyKind backSupply;
         public NightActionType nightAction;
-        public int batteries;
+
+        /// <summary>Just the front: how anyone else's card is sent, since fronts are public.</summary>
+        public static CardSnapshot FrontOf(CardData card) => new CardSnapshot
+        {
+            front = card.front,
+            frontSupply = card.frontSupply,
+            morningAction = card.morningAction,
+            keyDesignIndex = card.keyDesignIndex,
+            frontUsed = card.frontUsed,
+        };
 
         public static CardSnapshot From(CardData card)
         {
@@ -29,6 +39,7 @@ namespace TDTS.Networking
                 frontSupply = card.frontSupply,
                 morningAction = card.morningAction,
                 keyDesignIndex = card.keyDesignIndex,
+                frontUsed = card.frontUsed,
                 peeked = card.peeked,
             };
             if (card.peeked)
@@ -36,7 +47,6 @@ namespace TDTS.Networking
                 snap.back = card.back;
                 snap.backSupply = card.backSupply;
                 snap.nightAction = card.nightAction;
-                snap.batteries = card.batteries;
             }
             return snap;
         }
@@ -47,11 +57,11 @@ namespace TDTS.Networking
             frontSupply = frontSupply,
             morningAction = morningAction,
             keyDesignIndex = keyDesignIndex,
+            frontUsed = frontUsed,
             peeked = peeked,
             back = back,
             backSupply = backSupply,
             nightAction = nightAction,
-            batteries = batteries,
         };
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
@@ -60,17 +70,17 @@ namespace TDTS.Networking
             serializer.SerializeValue(ref frontSupply);
             serializer.SerializeValue(ref morningAction);
             serializer.SerializeValue(ref keyDesignIndex);
+            serializer.SerializeValue(ref frontUsed);
             serializer.SerializeValue(ref peeked);
             serializer.SerializeValue(ref back);
             serializer.SerializeValue(ref backSupply);
             serializer.SerializeValue(ref nightAction);
-            serializer.SerializeValue(ref batteries);
         }
     }
 
     /// <summary>
     /// Everything one seat may know about the table, sent by the host to that seat's device only.
-    /// Other players appear as a name and a card count; their cards never leave the host.
+    /// Other players appear as a name and the fronts of their cards; their backs never leave the host.
     /// Seats are indexes into the turn order.
     /// </summary>
     public struct SeatSnapshot : INetworkSerializable
@@ -85,6 +95,7 @@ namespace TDTS.Networking
         public bool limitActions;
         public int actionsLeft;
         public int peeksThisTurn;
+        public bool stoleOrSwapped;
         public int activeSeat;   // -1 between phases
         public int turnNumber;
         public DayRule dayRule;
@@ -97,9 +108,11 @@ namespace TDTS.Networking
         public string[] resultReasons;
 
         public CardSnapshot[] hand;    // your own hand only
+        public CardSnapshot[] fronts;  // every seat's fronts in seat order, handCounts[i] of them each
 
         public int tradeFrom;          // -1 = no trade waiting
         public int tradeTo;
+        public int tradeWanted;        // the card asked for, as an index into tradeTo's hand
         public float tradeSecondsLeft;
 
         public string[] log;           // already filtered for this seat (spec C1)
@@ -116,6 +129,7 @@ namespace TDTS.Networking
             serializer.SerializeValue(ref limitActions);
             serializer.SerializeValue(ref actionsLeft);
             serializer.SerializeValue(ref peeksThisTurn);
+            serializer.SerializeValue(ref stoleOrSwapped);
             serializer.SerializeValue(ref activeSeat);
             serializer.SerializeValue(ref turnNumber);
             serializer.SerializeValue(ref dayRule);
@@ -127,9 +141,11 @@ namespace TDTS.Networking
             SerializeArray(serializer, ref seated);
             SerializeStrings(serializer, ref resultReasons);
             SerializeCards(serializer, ref hand);
+            SerializeCards(serializer, ref fronts);
 
             serializer.SerializeValue(ref tradeFrom);
             serializer.SerializeValue(ref tradeTo);
+            serializer.SerializeValue(ref tradeWanted);
             serializer.SerializeValue(ref tradeSecondsLeft);
 
             SerializeStrings(serializer, ref log);

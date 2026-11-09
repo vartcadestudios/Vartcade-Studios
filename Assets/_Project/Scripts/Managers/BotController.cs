@@ -1,42 +1,89 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
+using TDTS.Bots;
 using TDTS.Data;
 
 namespace TDTS.Managers
 {
     /// <summary>
     /// Takes the turns of every seat no person is sitting in (offline: everyone but you;
-    /// online: the empty seats) with simple random choices, so a whole game keeps moving.
-    /// Runs only where GameManager runs the rules: offline, or on the online host.
-    /// GameManager adds this automatically when "Bots Play Other Seats" is ticked.
+    /// online: the empty seats). Each bot seat gets a strategy (Aggressive, Passive,
+    /// Human-like or Random) and a BotBrain that ranks its moves; this just plays them
+    /// out with a short "thinking" pause. Runs only where GameManager runs the rules:
+    /// offline, or on the online host. GameManager adds it automatically if it's missing.
     /// </summary>
     public class BotController : MonoBehaviour
     {
+        public static BotController Current { get; private set; }
+
         [SerializeField] private float thinkSeconds = 1.2f;
-        [Range(0f, 1f)]
-        [SerializeField] private float acceptTradeChance = 0.6f;
+
+        [Tooltip("Strategy for each bot seat, in turn order. Repeats if there are more bots than entries.")]
+        [SerializeField] private BotStrategy[] seatStrategies =
+            { BotStrategy.Aggressive, BotStrategy.Passive, BotStrategy.HumanLike };
+
+        [Tooltip("Write each bot's reasoning to the Console (it can mention hidden cards, so it isn't shown in the game).")]
+        [SerializeField] private bool logThinking = true;
 
         private GameManager gm;
+        private LiveBotTable table;
+        private readonly Dictionary<PlayerData, BotBrain> brains = new Dictionary<PlayerData, BotBrain>();
+        private readonly System.Random rng = new System.Random();
         private int handledTurn = -1;
+
+        private void Awake() => Current = this;
 
         private void Start()
         {
             gm = GameManager.Instance;
             if (gm == null) return;
+            table = new LiveBotTable(gm);
 
             gm.OnTurnChanged += HandleTurnChanged;
             gm.OnTradeOffered += HandleTradeOffered;
+            gm.OnPeeked += HandlePeeked;
+            gm.OnFlashlightSeen += HandleFlashlightSeen;
+            gm.OnStateChanged += HandleStateChanged;
             HandleTurnChanged(); // the first turn may have started before we subscribed
         }
 
         private void OnDestroy()
         {
+            if (Current == this) Current = null;
             if (gm == null) return;
             gm.OnTurnChanged -= HandleTurnChanged;
             gm.OnTradeOffered -= HandleTradeOffered;
+            gm.OnPeeked -= HandlePeeked;
+            gm.OnFlashlightSeen -= HandleFlashlightSeen;
+            gm.OnStateChanged -= HandleStateChanged;
         }
+
+        /// <summary>The bot seat's brain, created the first time it's needed.</summary>
+        private BotBrain BrainFor(PlayerData bot)
+        {
+            if (brains.TryGetValue(bot, out BotBrain brain)) return brain;
+
+            int botNumber = 0;
+            foreach (PlayerData p in gm.Players)
+            {
+                if (p == bot) break;
+                if (!gm.IsHuman(p)) botNumber++;
+            }
+            BotStrategy strategy = seatStrategies.Length == 0
+                ? BotStrategy.HumanLike
+                : seatStrategies[botNumber % seatStrategies.Length];
+
+            brain = new BotBrain(BotProfile.For(strategy), rng);
+            brains[bot] = brain;
+            return brain;
+        }
+
+        /// <summary>" (Aggressive bot)" for the seat labels, or "" for people.</summary>
+        public string TagFor(PlayerData player) =>
+            player == null || gm == null || gm.IsHuman(player) ? "" : $" ({BrainFor(player).Profile.Label} bot)";
+
+        // ---------- Taking a turn ----------
 
         private void HandleTurnChanged()
         {
@@ -49,76 +96,77 @@ namespace TDTS.Managers
 
         private IEnumerator TakeTurn(PlayerData bot, int turn)
         {
+            BotBrain brain = BrainFor(bot);
+            brain.NewTurn();
+
             while (gm.TurnNumber == turn)
             {
                 yield return new WaitForSeconds(GameSettings.BotThinkSeconds(thinkSeconds));
                 if (gm.TurnNumber != turn) yield break;
                 if (gm.PendingTrade != null) continue; // wait for the answer
 
-                bool acted = gm.CurrentState == GameState.DayPhase ? DayAction(bot) : NightAction(bot);
-                if (!acted && gm.TurnNumber == turn)
+                int actionsBefore = gm.ActionsLeft;
+                BotMove played = PlayBestMove(bot);
+                if (played == null)
                 {
-                    gm.PassTurn(bot); // nothing worked, so don't hold up the table
-                    if (gm.TurnNumber == turn) yield break; // couldn't even pass; leave it
+                    if (gm.TurnNumber == turn) yield break; // nothing worked; leave it
+                    continue;
+                }
+
+                // A refused trade gives the action back, so don't ask the same player again this turn
+                if (played.kind == MoveKind.Trade)
+                {
+                    while (gm.PendingTrade != null && gm.TurnNumber == turn) yield return null;
+                    if (gm.TurnNumber == turn && gm.ActionsLeft == actionsBefore) brain.NoteTradeRefused(played.target);
                 }
             }
         }
 
-        private bool DayAction(PlayerData bot)
+        /// <summary>Tries the brain's moves best first until the game accepts one. Returns the move played, or null.</summary>
+        private BotMove PlayBestMove(PlayerData bot)
         {
-            float roll = Random.value;
-            bool tradingOnly = gm.CurrentDayRule == DayRule.TradingOnly;
-
-            // Never offer a person a trade with eyes closed: they couldn't see it
-            var partners = Others(bot).Where(p => p.hand.Count > 0 && (!gm.EyesClosed || !gm.IsHuman(p))).ToList();
-            if (bot.hand.Count > 0 && partners.Count > 0 && (tradingOnly || roll < 0.15f))
-                return gm.OfferTrade(bot, Random.Range(0, bot.hand.Count), Pick(partners));
-
-            if (tradingOnly) return gm.PassTurn(bot);
-
-            int morning = bot.hand.FindIndex(c => c.HasMorningFront);
-            if (morning >= 0 && roll < 0.40f)
-                return gm.PlayCard(bot, morning, Pick(Others(bot)));
-
-            if (gm.DeckCount > 0 && bot.hand.Count < GameManager.MaxHandSize && roll < 0.90f)
-                return gm.DrawCard(bot);
-
-            return gm.PassTurn(bot);
+            BotBrain brain = BrainFor(bot);
+            foreach (BotMove move in brain.RankMoves(table, bot))
+            {
+                if (!TryMove(bot, move)) continue;
+                if (logThinking) Debug.Log($"[Bot] {bot.playerName} ({brain.Profile.Label}): {move.kind} - {move.reason}");
+                return move;
+            }
+            return null;
         }
 
-        private bool NightAction(PlayerData bot)
+        private bool TryMove(PlayerData bot, BotMove move) => move.kind switch
         {
-            // First action: always peek at a card it hasn't looked at yet (R4)
-            if (gm.PeeksThisTurn == 0 && bot.hand.Count > 0)
-            {
-                int unseen = bot.hand.FindIndex(c => !c.peeked);
-                return gm.PeekCard(bot, unseen >= 0 ? unseen : Random.Range(0, bot.hand.Count));
-            }
+            MoveKind.Scavenge => gm.DrawCard(bot),
+            MoveKind.Trade => gm.OfferTrade(bot, move.handIndex, move.target, move.targetCardIndex),
+            MoveKind.PlayCard => gm.PlayCard(bot, move.handIndex, move.target),
+            MoveKind.Peek => gm.PeekCard(bot, move.handIndex),
+            MoveKind.Steal => gm.StealFrom(bot, move.target, move.targetCardIndex),
+            MoveKind.Swap => gm.SwapWith(bot, move.handIndex, move.target),
+            MoveKind.Convert => false, // conversion is only a Balance Simulator test so far
+            _ => gm.PassTurn(bot),
+        };
 
-            float roll = Random.value;
-            var victims = Others(bot).Where(p => p.hand.Count > 0).ToList();
+        // ---------- Memory ----------
 
-            int nightCard = bot.hand.FindIndex(c => c.HasNightBack && c.peeked);
-            if (nightCard >= 0 && victims.Count > 0 && roll < 0.5f)
-                return gm.PlayCard(bot, nightCard, Pick(victims));
-
-            if (victims.Count > 0 && bot.hand.Count < GameManager.MaxHandSize && roll < 0.65f)
-            {
-                PlayerData victim = Pick(victims);
-                return gm.StealFrom(bot, victim, Random.Range(0, victim.hand.Count));
-            }
-
-            // Swap away a card it knows is Trash
-            int trash = bot.hand.FindIndex(c => c.peeked && c.back == BackType.Trash);
-            if (trash >= 0 && victims.Count > 0 && roll < 0.85f)
-                return gm.SwapWith(bot, trash, Pick(victims));
-
-            return gm.PassTurn(bot);
+        private void HandlePeeked(PlayerData player, int handIndex)
+        {
+            if (gm.IsHuman(player) || handIndex < 0 || handIndex >= player.hand.Count) return;
+            BrainFor(player).Memory.Saw(player.hand[handIndex]);
         }
 
-        private List<PlayerData> Others(PlayerData bot) => gm.Players.Where(p => p != bot).ToList();
+        private void HandleFlashlightSeen(PlayerData player, CardData card)
+        {
+            if (!gm.IsHuman(player)) BrainFor(player).Memory.Saw(card);
+        }
 
-        private static PlayerData Pick(List<PlayerData> list) => list.Count == 0 ? null : list[Random.Range(0, list.Count)];
+        private void HandleStateChanged(GameState previous, GameState next)
+        {
+            if (next != GameState.DayPhase) return;
+            foreach (var pair in brains) pair.Value.OnNewDay(pair.Key);
+        }
+
+        // ---------- Answering trades ----------
 
         private void HandleTradeOffered()
         {
@@ -132,8 +180,12 @@ namespace TDTS.Managers
             yield return new WaitForSeconds(GameSettings.BotThinkSeconds(thinkSeconds));
             if (gm.PendingTrade != trade) yield break;
 
-            bool accept = Random.value < acceptTradeChance && trade.to.hand.Count > 0;
-            gm.RespondToTrade(accept, accept ? Random.Range(0, trade.to.hand.Count) : -1);
+            BotBrain brain = BrainFor(trade.to);
+            bool accept = brain.WantsTrade(trade.to, trade.card, trade.wanted);
+            if (logThinking)
+                Debug.Log($"[Bot] {trade.to.playerName} ({brain.Profile.Label}): {(accept ? "accepts" : "refuses")} " +
+                          $"{trade.from.playerName}'s {trade.card.FrontName} for its {trade.wanted.FrontName}");
+            gm.RespondToTrade(accept);
         }
     }
 }

@@ -163,6 +163,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ac0f7256013466f8436443bb72d3608, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TDTS.UI.CardGalleryController
+  deckRecipe:
+    morningFronts:
+    - 4
+    - 4
+    - 4
+    - 4
+    - 4
+    nightBacks:
+    - 8
+    - 6
+    - 6
+    supplyBacks: 36
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

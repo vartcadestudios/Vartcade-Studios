@@ -37,16 +37,16 @@ namespace TDTS.Managers
         [Tooltip("Rulebook: 1 action per Day turn, 2 per Night turn. Untick to test freely.")]
         [SerializeField] private bool limitActions = true;
 
-        // The spec has no hand limit, but the hand row only has 6 slots for now.
-        public const int MaxHandSize = 6;
         public const int StartingHandSize = 2;
         public const int MaxPlayers = 6;
         public const int RondoStartDay = 6;
-        public const int SupplyToSurvive = 3;
+        public const int SupplyToSurvive = 3; // different Supply kinds needed to qualify for a seat
         public const int PurgeCount = 5;
 
         [Header("Deck")]
         [SerializeField] private DeckRecipe deckRecipe = new DeckRecipe();
+        [Tooltip("The fixed card list: which back hides behind each front. Turn off to pair fronts and backs at random from the Deck Recipe.")]
+        [SerializeField] private CardSpread cardSpread = new CardSpread();
         [Tooltip("0 = a new random game every time. Any other number deals the same game again.")]
         [SerializeField] private int randomSeed = 0;
 
@@ -81,17 +81,19 @@ namespace TDTS.Managers
         private int turnNumber;
         private readonly HashSet<PlayerData> hadTurn = new HashSet<PlayerData>();
         private CardData stolenThisTurn;
+        private bool stoleOrSwapped; // one Steal or Swap a night
 
         private TradeOffer pendingTrade;
         private float tradeOfferedAt;
         public const float TradeTimeoutSeconds = 30f; // spec R9
 
-        /// <summary>Spec zone Z5: a card offered to another player, waiting for their answer.</summary>
+        /// <summary>Spec zone Z5: a card offered to another player for one of theirs, waiting for their answer.</summary>
         public class TradeOffer
         {
             public PlayerData from;
             public PlayerData to;
-            public CardData card;
+            public CardData card;   // what's on offer
+            public CardData wanted; // the card of theirs the offerer picked
         }
 
         /// <summary>
@@ -116,6 +118,7 @@ namespace TDTS.Managers
         public bool LimitActions => limitActions;
         public int ActionsLeft => actionsLeft;
         public int PeeksThisTurn => peeksThisTurn;
+        public bool StoleOrSwappedThisTurn => stoleOrSwapped;
         public PlayerData SelectedTarget => selectedTarget;
         public int SelectedCardIndex => selectedCardIndex;
         public IReadOnlyList<string> PlayLog => LogFor(localPlayer);
@@ -177,6 +180,10 @@ namespace TDTS.Managers
         public event Action<int> OnLocalPeek;
         /// <summary>Any player peeked at the card at this hand index (the host tells that player's device).</summary>
         public event Action<PlayerData, int> OnPeeked;
+        /// <summary>Any player's Flashlight showed them the back of this card (bots remember it).</summary>
+        public event Action<PlayerData, CardData> OnFlashlightSeen;
+        /// <summary>The local player's Flashlight lit up every card in this player's hand (theirs may be yours).</summary>
+        public event Action<PlayerData, List<CardData>> OnLocalFlashlight;
 
         private void Awake()
         {
@@ -214,7 +221,7 @@ namespace TDTS.Managers
             if (pendingTrade != null && Time.time - tradeOfferedAt > TradeTimeoutSeconds)
             {
                 AddLog("No answer in time.");
-                RespondToTrade(false, -1);
+                RespondToTrade(false);
             }
         }
 
@@ -262,7 +269,18 @@ namespace TDTS.Managers
             deck.Clear();
             discardPile.Clear();
             removedFromGame.Clear();
-            deck.AddRange(DeckBuilder.BuildDrawPile(deckRecipe, rng, removedFromGame));
+            deck.AddRange(cardSpread.use
+                ? cardSpread.Build(deckRecipe.morningFronts, rng, removedFromGame)
+                : DeckBuilder.BuildDrawPile(deckRecipe, rng, removedFromGame));
+
+            // The Key goes into the top half of the pile, so it nearly always turns up before Sundown
+            int keyAt = deck.FindIndex(c => c.IsKey);
+            CardData keyCard = deck[keyAt];
+            deck.RemoveAt(keyAt);
+            deck.Insert(rng.Next(deck.Count / 2, deck.Count + 1), keyCard); // the end of the list is the top
+
+            // 2 bunker seats, 3 with 5 or 6 players
+            bunkerCapacity = players.Count >= 5 ? 3 : 2;
 
             // S4: deal one card at a time around the table
             foreach (var p in players) p.hand.Clear();
@@ -328,7 +346,7 @@ namespace TDTS.Managers
             OnPlayLogChanged?.Invoke();
         }
 
-        /// <summary>A line only this player sees, like "your hand is full" or a Flashlight result.</summary>
+        /// <summary>A line only this player sees, like "finish your moves first" or a Flashlight result.</summary>
         private void Tell(PlayerData player, string line) => AddLog(new LogEntry { text = line, viewer = player });
 
         /// <summary>
@@ -396,7 +414,7 @@ namespace TDTS.Managers
             // R4: the last Night action must be a peek if you haven't peeked yet
             if (phase == GameState.NightPhase && !isPeek && MustPeekNow(player))
             {
-                Tell(player, "You must peek at least once tonight. Tap one of your cards.");
+                Tell(player, "You must peek at least once tonight. Tap one of your cards, then Peek.");
                 return false;
             }
             return true;
@@ -418,6 +436,40 @@ namespace TDTS.Managers
             if (!limitActions) return;
             actionsLeft = Mathf.Max(0, actionsLeft - 1);
             if (actionsLeft == 0) EndTurn();
+            else EndTurnIfStuck();
+        }
+
+        /// <summary>
+        /// There's no Pass: players use all their actions. This is true while the player still
+        /// has at least one action they could take, so a turn only ends early when nothing is possible.
+        /// </summary>
+        public bool HasAnyMove(PlayerData player)
+        {
+            if (!limitActions) return true;
+            bool othersHaveCards = players.Any(p => p != player && p.hand.Count > 0);
+
+            if (currentState == GameState.DayPhase)
+            {
+                bool cardsAllowed = dayRule != DayRule.TradingOnly;
+                return (cardsAllowed && deck.Count > 0)                              // Scavenge
+                    || (player.hand.Count > 0 && othersHaveCards)                    // Trade
+                    || (cardsAllowed && player.hand.Any(c => c.HasMorningFront && !c.frontUsed)); // Play card
+            }
+            if (currentState == GameState.NightPhase)
+            {
+                return (othersHaveCards && !stoleOrSwapped)                          // Steal, Swap (one a night)
+                    || player.hand.Count > 0;                                        // Peek (or Play card)
+            }
+            return false;
+        }
+
+        /// <summary>The active player can't do anything with the actions they have left, so move on.</summary>
+        private void EndTurnIfStuck()
+        {
+            PlayerData p = ActivePlayer;
+            if (p == null || pendingTrade != null || HasAnyMove(p)) return;
+            AddLog($"{p.playerName} has no moves left.");
+            EndTurn();
         }
 
         // ---------- Day actions ----------
@@ -437,11 +489,6 @@ namespace TDTS.Managers
                 Tell(player, "The draw pile is empty.");
                 return false;
             }
-            if (player.hand.Count >= MaxHandSize)
-            {
-                Tell(player, "Your hand is full.");
-                return false;
-            }
 
             GiveCard(player, TakeTopCard());
             LogAction(player, $"{player.playerName} scavenged a card.");
@@ -451,8 +498,11 @@ namespace TDTS.Managers
             return true;
         }
 
-        /// <summary>P1 Offer trade: puts 1 card on offer to another player (Day). They answer with RespondToTrade.</summary>
-        public bool OfferTrade(PlayerData from, int handIndex, PlayerData to)
+        /// <summary>
+        /// P1 Offer trade (Day): your card at handIndex for the card of theirs at wantedIndex.
+        /// Fronts are on show, so you choose which of their cards you want. They accept or refuse.
+        /// </summary>
+        public bool OfferTrade(PlayerData from, int handIndex, PlayerData to, int wantedIndex)
         {
             if (!CanAct(from, GameState.DayPhase, "Trade")) return false;
 
@@ -471,34 +521,48 @@ namespace TDTS.Managers
                 Tell(from, $"{to.playerName} has no cards to trade.");
                 return false;
             }
+            if (wantedIndex < 0 || wantedIndex >= to.hand.Count)
+            {
+                Tell(from, $"Pick which of {to.playerName}'s cards you want.");
+                return false;
+            }
 
             CardData card = from.hand[handIndex];
+            CardData wanted = to.hand[wantedIndex];
             from.hand.RemoveAt(handIndex);
-            pendingTrade = new TradeOffer { from = from, to = to, card = card };
+            pendingTrade = new TradeOffer { from = from, to = to, card = card, wanted = wanted };
             tradeOfferedAt = Time.time;
 
-            LogAction(from, $"{from.playerName} offers {to.playerName} a {card.FrontName}.");
+            LogAction(from, $"{from.playerName} offers {to.playerName} {A(card.FrontName)} for their {wanted.FrontName}.");
             NotifyHandsChanged();
             OnTradeOffered?.Invoke();
             return true;
         }
 
+        /// <summary>"a Food", "an Entertainment".</summary>
+        private static string A(string name) => ("AEIOU".IndexOf(char.ToUpperInvariant(name[0])) >= 0 ? "an " : "a ") + name;
+
+        /// <summary>Where the card the offerer asked for sits in the answering player's hand, or -1.</summary>
+        public int TradeWantedIndex => pendingTrade == null ? -1 : pendingTrade.to.hand.IndexOf(pendingTrade.wanted);
+
         /// <summary>
-        /// P2 Accept/decline trade. Accepting gives back the card at handIndex and costs the
-        /// offerer 1 AP; declining returns the offered card and the offerer keeps their AP (spec R9).
+        /// P2 Accept/refuse trade. Accepting swaps the offered card for the one the offerer picked and
+        /// costs the offerer 1 AP; refusing returns the offered card and the offerer keeps their AP (spec R9).
         /// </summary>
-        public void RespondToTrade(bool accept, int handIndex)
+        public void RespondToTrade(bool accept)
         {
             if (pendingTrade == null) return;
 
             TradeOffer trade = pendingTrade;
             pendingTrade = null;
 
-            if (!accept || handIndex < 0 || handIndex >= trade.to.hand.Count)
+            int handIndex = trade.to.hand.IndexOf(trade.wanted);
+            if (!accept || handIndex < 0)
             {
                 trade.from.hand.Add(trade.card); // still theirs, so they keep what they knew about it
                 AddLog($"{trade.to.playerName} declined the trade.");
                 NotifyHandsChanged();
+                EndTurnIfStuck();
                 return;
             }
 
@@ -514,10 +578,18 @@ namespace TDTS.Managers
 
         // ---------- Night actions ----------
 
-        /// <summary>P6 Peek / P8 Steal-Peek: look at the back of one of your own cards (Night).</summary>
+        /// <summary>
+        /// P6 Peek / P8 Steal-Peek: look at the back of one of your own cards (Night).
+        /// Each peek uses 1 action, so peeking at two cards ends your Night turn.
+        /// </summary>
         public bool PeekCard(PlayerData player, int handIndex)
         {
-            if (player == null || handIndex < 0 || handIndex >= player.hand.Count) return false;
+            if (player == null) return false;
+            if (handIndex < 0 || handIndex >= player.hand.Count)
+            {
+                Tell(player, "Tap one of your cards first, then Peek.");
+                return false;
+            }
             if (!CanAct(player, GameState.NightPhase, "Peek", isPeek: true)) return false;
 
             CardData card = player.hand[handIndex];
@@ -539,10 +611,18 @@ namespace TDTS.Managers
             return true;
         }
 
+        /// <summary>Only one Steal or Swap a night; the other action is for peeking (or playing a card).</summary>
+        private bool CanStealOrSwap(PlayerData player)
+        {
+            if (!stoleOrSwapped) return true;
+            Tell(player, "You can only Steal or Swap once a night. Peek at a card instead.");
+            return false;
+        }
+
         /// <summary>P7 Steal: the thief picks one of the target's face-down cards and takes it (Night).</summary>
         public bool StealFrom(PlayerData thief, PlayerData victim, int victimCardIndex)
         {
-            if (!CanAct(thief, GameState.NightPhase, "Steal")) return false;
+            if (!CanAct(thief, GameState.NightPhase, "Steal") || !CanStealOrSwap(thief)) return false;
 
             if (victim == null || victim == thief)
             {
@@ -552,11 +632,6 @@ namespace TDTS.Managers
             if (victim.hand.Count == 0)
             {
                 Tell(thief, $"{victim.playerName} has no cards.");
-                return false;
-            }
-            if (thief.hand.Count >= MaxHandSize)
-            {
-                Tell(thief, "Your hand is full.");
                 return false;
             }
             if (victimCardIndex < 0 || victimCardIndex >= victim.hand.Count)
@@ -569,6 +644,7 @@ namespace TDTS.Managers
             victim.hand.RemoveAt(victimCardIndex);
             GiveCard(thief, stolen);
             stolenThisTurn = stolen;
+            stoleOrSwapped = true;
 
             LogAction(thief, $"{thief.playerName} stole a {stolen.FrontName} from {victim.playerName}.");
             NotifyHandsChanged();
@@ -579,7 +655,7 @@ namespace TDTS.Managers
         /// <summary>P9 Swap: your chosen card for a random face-down card from the target (Night).</summary>
         public bool SwapWith(PlayerData player, int handIndex, PlayerData target)
         {
-            if (!CanAct(player, GameState.NightPhase, "Swap")) return false;
+            if (!CanAct(player, GameState.NightPhase, "Swap") || !CanStealOrSwap(player)) return false;
 
             if (target == null || target == player)
             {
@@ -602,6 +678,7 @@ namespace TDTS.Managers
             CardData theirs = TakeRandomCard(target);
             GiveCard(player, theirs);
             GiveCard(target, mine);
+            stoleOrSwapped = true;
 
             LogAction(player, $"{player.playerName} swapped a {mine.FrontName} for {target.playerName}'s {theirs.FrontName}.");
             NotifyHandsChanged();
@@ -624,6 +701,12 @@ namespace TDTS.Managers
             bool isDay = currentState == GameState.DayPhase;
             string cardName = isDay ? card.FrontName : card.BackName;
 
+            if (isDay && card.HasMorningFront && card.frontUsed)
+            {
+                Tell(player, $"You've already used this {cardName}. The card stays in your hand, and its back still counts.");
+                return false;
+            }
+
             bool allowed =
                 (isDay && card.HasMorningFront) ||
                 (currentState == GameState.NightPhase && card.HasNightBack && card.peeked);
@@ -643,26 +726,34 @@ namespace TDTS.Managers
                 Tell(player, "Trading Only today: no Action Cards.");
                 return false;
             }
+            // R10: the Flashlight can light up your own hand; with nobody picked, it does
+            bool canTargetSelf = CanTargetSelf(card, isDay);
             if (!NeedsTarget(card, isDay))
             {
                 target = null;
             }
-            else if (target == null || target == player)
+            else if (canTargetSelf && target == null)
+            {
+                target = player;
+            }
+            else if (target == null || (target == player && !canTargetSelf))
             {
                 Tell(player, $"Tap a player first, then play {cardName}.");
                 return false;
             }
 
-            // Flashlight stays in hand until its batteries run out (R10)
-            bool keepInHand = !isDay && card.nightAction == NightActionType.Flashlight && card.batteries > 1;
-            if (!keepInHand)
+            if (isDay)
+            {
+                card.frontUsed = true; // a played Morning card stays in hand, so its back still counts
+            }
+            else
             {
                 player.hand.RemoveAt(handIndex);
                 discardPile.Add(card);
             }
 
-            LogAction(player, target != null
-                ? $"{player.playerName} played {cardName} on {target.playerName}."
+            LogAction(player, target == player ? $"{player.playerName} played {cardName} on their own hand."
+                : target != null ? $"{player.playerName} played {cardName} on {target.playerName}."
                 : $"{player.playerName} played {cardName}.");
 
             if (isDay) ResolveMorningCard(card.morningAction, player, target);
@@ -677,6 +768,10 @@ namespace TDTS.Managers
 
         public static bool NeedsTarget(CardData card, bool isDay) =>
             isDay ? card.morningAction == MorningActionType.SwapDeck : card.HasNightBack;
+
+        /// <summary>Only the Flashlight may be aimed at your own hand.</summary>
+        public static bool CanTargetSelf(CardData card, bool isDay) =>
+            !isDay && card.HasNightBack && card.nightAction == NightActionType.Flashlight;
 
         /// <summary>G19 to G23.</summary>
         private void ResolveMorningCard(MorningActionType action, PlayerData player, PlayerData target)
@@ -706,7 +801,6 @@ namespace TDTS.Managers
                     foreach (PlayerData p in PlayersInTurnOrderFrom(player))
                     {
                         if (deck.Count == 0) break;
-                        if (p.hand.Count >= MaxHandSize) continue;
                         GiveCard(p, TakeTopCard());
                         dealt++;
                     }
@@ -732,11 +826,20 @@ namespace TDTS.Managers
             switch (card.nightAction)
             {
                 case NightActionType.Flashlight:
-                    card.batteries--;
-                    if (target.hand.Count == 0) break;
-                    CardData seen = target.hand[rng.Next(target.hand.Count)];
-                    Tell(player, $"Flashlight: one of {target.playerName}'s cards is {seen.BackName}. ({card.batteries} batteries left)");
-                    if (player == localPlayer) OnCardRevealedToYou?.Invoke(target, seen);
+                    // R10: one use, and it lights every card in the chosen hand (yours included)
+                    var lit = new List<CardData>(target.hand);
+                    if (target == player) foreach (CardData c in lit) c.peeked = true;
+
+                    string backs = lit.Count == 0 ? "no cards"
+                        : string.Join(", ", lit.Select(c => $"{c.FrontName} is {c.BackName}"));
+                    Tell(player, target == player ? $"Flashlight on your own hand: {backs}." : $"Flashlight on {target.playerName}: {backs}.");
+
+                    foreach (CardData c in lit)
+                    {
+                        OnFlashlightSeen?.Invoke(player, c);
+                        if (player == localPlayer) OnCardRevealedToYou?.Invoke(target, c);
+                    }
+                    if (player == localPlayer) OnLocalFlashlight?.Invoke(target, lit);
                     break;
 
                 case NightActionType.TargetedNightSkip:
@@ -760,10 +863,20 @@ namespace TDTS.Managers
 
         // ---------- Ending a turn ----------
 
-        /// <summary>P5 Pass (Day) / P11 End Night turn: ends the turn. At Night you must have peeked (R4).</summary>
+        /// <summary>
+        /// P5 Pass (Day) / P11 End Night turn. There's no Pass button any more: people must use their
+        /// actions, so this only goes through when they have no move left (or actions aren't limited).
+        /// Bots may still call it when none of their picks worked. At Night you must have peeked (R4).
+        /// </summary>
         public bool PassTurn(PlayerData player)
         {
             if (player == null || player != ActivePlayer || pendingTrade != null) return false;
+
+            if (IsHuman(player) && HasAnyMove(player))
+            {
+                Tell(player, "Finish your moves first.");
+                return false;
+            }
 
             if (currentState == GameState.NightPhase && peeksThisTurn == 0 && player.hand.Count > 0 && limitActions)
             {
@@ -782,13 +895,13 @@ namespace TDTS.Managers
         public void StealForLocalPlayer(int victimCardIndex) { StealFrom(LocalPlayer, selectedTarget, victimCardIndex); }
         public void SwapSelectedForLocalPlayer() { SwapWith(LocalPlayer, selectedCardIndex, selectedTarget); }
         public void PassForLocalPlayer() { PassTurn(LocalPlayer); }
-        public void TradeSelectedForLocalPlayer() { OfferTrade(LocalPlayer, selectedCardIndex, selectedTarget); }
+        public void TradeSelectedForLocalPlayer(int wantedIndex) { OfferTrade(LocalPlayer, selectedCardIndex, selectedTarget, wantedIndex); }
         // Kept so the old Skip button binding still compiles; at Night it now ends your turn.
         public void SkipForLocalPlayer() { PassTurn(LocalPlayer); }
 
         public void PeekForLocalPlayer(int handIndex) { PeekCard(LocalPlayer, handIndex); }
         public void PlaySelectedForLocalPlayer() { PlayChosenCard(LocalPlayer, selectedCardIndex, selectedTarget); }
-        public void AnswerTradeForLocalPlayer(bool accept) { AnswerTrade(LocalPlayer, accept, selectedCardIndex); }
+        public void AnswerTradeForLocalPlayer(bool accept) { AnswerTrade(LocalPlayer, accept); }
 
         /// <summary>Play card button: the card this player picked, on the player they picked.</summary>
         public bool PlayChosenCard(PlayerData player, int handIndex, PlayerData target)
@@ -801,16 +914,11 @@ namespace TDTS.Managers
             return PlayCard(player, handIndex, target);
         }
 
-        /// <summary>A person answers a trade offered to them: accept gives away the card at handIndex.</summary>
-        public void AnswerTrade(PlayerData player, bool accept, int handIndex)
+        /// <summary>A person answers a trade offered to them: accept gives away the card the offerer picked.</summary>
+        public void AnswerTrade(PlayerData player, bool accept)
         {
             if (pendingTrade == null || pendingTrade.to != player) return;
-            if (accept && handIndex < 0)
-            {
-                Tell(player, "Tap the card you'll give in return, then Accept.");
-                return;
-            }
-            RespondToTrade(accept, handIndex);
+            RespondToTrade(accept);
         }
 
         // ---------- Selection ----------
@@ -849,6 +957,7 @@ namespace TDTS.Managers
             selectedTarget = null;
             selectedCardIndex = -1;
             stolenThisTurn = null;
+            stoleOrSwapped = false;
             peeksThisTurn = 0;
 
             bool isDay = currentState == GameState.DayPhase;
@@ -873,6 +982,7 @@ namespace TDTS.Managers
             actionsLeft = isDay ? 1 : 2;
             OnTargetChanged?.Invoke();
             OnTurnChanged?.Invoke();
+            EndTurnIfStuck();
         }
 
         /// <summary>Steps 5 and 9 (G16): next player who hasn't gone this phase, or end the phase.</summary>
@@ -923,7 +1033,11 @@ namespace TDTS.Managers
         /// <summary>Step 1: from Day 6, spin the Rondo for a result that hasn't come up yet.</summary>
         private void SpinRondo()
         {
-            var options = ((RondoResult[])Enum.GetValues(typeof(RondoResult))).Where(r => !rondoUsed.Contains(r)).ToList();
+            // Doomsday Clock would do nothing on the last Day, so it can't come up then
+            var options = ((RondoResult[])Enum.GetValues(typeof(RondoResult)))
+                .Where(r => !rondoUsed.Contains(r))
+                .Where(r => !(r == RondoResult.DoomsdayClock && currentDay >= sundownDay))
+                .ToList();
             if (options.Count == 0) return;
 
             RondoResult result = options[rng.Next(options.Count)];
@@ -1004,6 +1118,32 @@ namespace TDTS.Managers
             return lost;
         }
 
+        // ---------- Catch-up ----------
+
+        /// <summary>
+        /// From Day 2, the player furthest from surviving (fewest Supply kinds, then fewest real Supply,
+        /// and not holding the Key) draws a free card at the start of the Day. Ties are picked at random.
+        /// </summary>
+        private void CatchUpDraw()
+        {
+            if (deck.Count == 0) return;
+            var candidates = players.Where(p => !p.HoldsKey).ToList();
+            if (candidates.Count == 0) return;
+            int lowest = candidates.Min(p => p.SupplyRank);
+            var behind = candidates.Where(p => p.SupplyRank == lowest).ToList();
+            PlayerData chosen = behind[rng.Next(behind.Count)];
+
+            GiveCard(chosen, TakeTopCard());
+            AddLog(new LogEntry
+            {
+                text = "Catch-up: you're the furthest from the bunker, so you draw a free card.",
+                viewer = chosen,
+                forOthers = $"{chosen.playerName} draws a catch-up card.",
+            });
+            OnDeckChanged?.Invoke();
+            NotifyHandsChanged();
+        }
+
         // ---------- Sundown (spec G18, R1, R2) ----------
 
         private void DecideSurvivors()
@@ -1011,7 +1151,7 @@ namespace TDTS.Managers
             foreach (var p in players)
             {
                 p.isSeated = false;
-                p.resultReason = $"only {p.RealSupplyCount} real Supply";
+                p.resultReason = $"only {p.SupplyKinds} of the 3 Supply kinds needed";
             }
 
             int seatsLeft = bunkerCapacity;
@@ -1025,31 +1165,32 @@ namespace TDTS.Managers
                 seatsLeft--;
             }
 
-            // Everyone else needs 3+ real Supply; the most Supply wins the remaining seats
+            // Everyone else needs 3 different kinds of real Supply; more kinds, then more Supply, wins the remaining seats
             var qualifiers = players
-                .Where(p => !p.isSeated && p.RealSupplyCount >= SupplyToSurvive)
-                .OrderByDescending(p => p.RealSupplyCount)
+                .Where(p => !p.isSeated && p.SupplyKinds >= SupplyToSurvive)
+                .OrderByDescending(p => p.SupplyRank)
                 .ToList();
 
             int index = 0;
             while (seatsLeft > 0 && index < qualifiers.Count)
             {
-                int supply = qualifiers[index].RealSupplyCount;
-                var tied = qualifiers.Skip(index).TakeWhile(p => p.RealSupplyCount == supply).ToList();
+                int rank = qualifiers[index].SupplyRank;
+                string supply = $"{qualifiers[index].SupplyKinds} Supply kinds, {qualifiers[index].RealSupplyCount} real Supply";
+                var tied = qualifiers.Skip(index).TakeWhile(p => p.SupplyRank == rank).ToList();
 
                 if (tied.Count <= seatsLeft)
                 {
                     foreach (var p in tied)
                     {
                         p.isSeated = true;
-                        p.resultReason = $"{supply} real Supply";
+                        p.resultReason = supply;
                     }
                     seatsLeft -= tied.Count;
                 }
                 else
                 {
                     // R2: a tie for the last seat leaves it empty
-                    foreach (var p in tied) p.resultReason = $"{supply} real Supply, tied for the last seat";
+                    foreach (var p in tied) p.resultReason = $"{supply}, tied for the last seat";
                     break;
                 }
                 index += tied.Count;
@@ -1057,7 +1198,7 @@ namespace TDTS.Managers
 
             for (int i = index; i < qualifiers.Count; i++)
                 if (!qualifiers[i].isSeated && !qualifiers[i].resultReason.Contains("tied"))
-                    qualifiers[i].resultReason = $"{qualifiers[i].RealSupplyCount} real Supply, but the bunker was full";
+                    qualifiers[i].resultReason = $"{qualifiers[i].SupplyKinds} Supply kinds, but the bunker was full";
 
             AddLog($"SUNDOWN. {BunkerSeated} of {players.Count} made it into the bunker.");
         }
@@ -1085,10 +1226,11 @@ namespace TDTS.Managers
                 todaysRondo = null;
                 AddLog($"Day {currentDay} of {sundownDay}. Turn order: {string.Join(" > ", OrderedNames())}");
                 if (currentDay >= RondoStartDay) SpinRondo();
+                if (currentDay > 1) CatchUpDraw();
             }
             else if (next == GameState.NightPhase)
             {
-                AddLog("Night falls. Eyes closed: each player takes 2 actions and must peek at least once.");
+                AddLog("Night falls. Eyes closed: each player takes 2 actions, peeks at least once, and may Steal or Swap once.");
             }
             else if (next == GameState.Sundown)
             {
