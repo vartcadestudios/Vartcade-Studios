@@ -16,6 +16,7 @@ namespace TDTS.UI
     public class CardGalleryController : MonoBehaviour
     {
         [SerializeField] private DeckRecipe deckRecipe = new DeckRecipe();
+        [SerializeField] private CardSpread cardSpread = new CardSpread();
         [SerializeField] private Vector2 cardSize = new Vector2(112f, 150f);
         [SerializeField] private int columns = 15;
 
@@ -44,7 +45,9 @@ namespace TDTS.UI
             views.Clear();
 
             var removed = new List<CardData>();
-            List<CardData> cards = DeckBuilder.BuildDrawPile(deckRecipe, new System.Random(), removed);
+            List<CardData> cards = cardSpread.use
+                ? cardSpread.Build(deckRecipe.morningFronts, new System.Random(), removed)
+                : DeckBuilder.BuildDrawPile(deckRecipe, new System.Random(), removed);
 
             // Morning fronts first, then Supply (the Key among them); matching backs grouped inside each.
             IEnumerable<CardData> ordered = cards

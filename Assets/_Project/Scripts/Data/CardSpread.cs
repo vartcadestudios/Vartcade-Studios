@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
-using TDTS.Data;
 
-namespace TDTS.Simulation
+namespace TDTS.Data
 {
     /// <summary>
-    /// An exact card list to test, instead of the game's random front/back pairing.
+    /// The exact card list: which back hides behind each front, instead of random front/back pairing.
+    /// The game uses it (7 real / 4 Trash per kind, chosen from the Balance Simulator tests),
+    /// and the Balance Simulator can change it to test other spreads.
     /// Supply-front cards: for each kind (Food, Water, Medicine, Entertainment), how many have a
     /// real Supply back of that kind, a Trash back, a Night Skip back or a Day Skip back.
     /// Morning-front cards: what their backs are, spread evenly across the five Morning cards.
@@ -13,11 +14,11 @@ namespace TDTS.Simulation
     [Serializable]
     public class CardSpread
     {
-        public bool use = false;
+        public bool use = true;
 
         // Backs of each kind's Supply-front cards
-        public int realPerKind = 6;
-        public int trashPerKind = 5;
+        public int realPerKind = 7;
+        public int trashPerKind = 4;
         public int nightSkipPerKind = 1;
         public int daySkipPerKind = 1;
 

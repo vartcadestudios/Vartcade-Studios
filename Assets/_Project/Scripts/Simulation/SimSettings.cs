@@ -95,7 +95,7 @@ namespace TDTS.Simulation
 
         public KeyStart keyStart = KeyStart.Shuffled;
 
-        // An exact card list to test (off = the game's random front/back pairing)
+        // The exact card list, like the game (7 real / 4 Trash per kind). Turn off for random front/back pairing.
         public CardSpread spread = new CardSpread();
 
         public int bunkerSeats = 0; // 0 = like the game: 2 seats, 3 with 5 or 6 players

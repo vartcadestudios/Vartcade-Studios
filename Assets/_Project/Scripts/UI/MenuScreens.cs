@@ -47,8 +47,9 @@ namespace TDTS.UI
                 "There's no passing: your turn ends once you've made your move."),
 
             ("Night", "Night: eyes closed, two actions",
-                "Everyone closes their eyes. You get <b>two</b> actions. You <b>must peek</b> at least once, " +
-                "and you can <b>Steal or Swap only once</b>. Each peek uses an action, so two peeks end your turn.\n\n" +
+                "Everyone closes their eyes. You get <b>two</b> actions, and <b>one must be a Peek</b>. " +
+                "So each Night: peek at one of your cards, then <b>Steal, Swap, peek again, or play a Night card</b>. " +
+                "You can <b>Steal or Swap only once</b> a Night.\n\n" +
                 "<b>Peek</b>  Tap one of your cards, then press Peek to learn its back.\n" +
                 "<b>Steal</b>  Tap a player, then <b>choose</b> which of their cards to take.\n" +
                 "<b>Swap</b>  Give one of your cards for a random card of theirs.\n" +

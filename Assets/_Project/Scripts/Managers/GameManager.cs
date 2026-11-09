@@ -45,6 +45,8 @@ namespace TDTS.Managers
 
         [Header("Deck")]
         [SerializeField] private DeckRecipe deckRecipe = new DeckRecipe();
+        [Tooltip("The fixed card list: which back hides behind each front. Turn off to pair fronts and backs at random from the Deck Recipe.")]
+        [SerializeField] private CardSpread cardSpread = new CardSpread();
         [Tooltip("0 = a new random game every time. Any other number deals the same game again.")]
         [SerializeField] private int randomSeed = 0;
 
@@ -267,7 +269,9 @@ namespace TDTS.Managers
             deck.Clear();
             discardPile.Clear();
             removedFromGame.Clear();
-            deck.AddRange(DeckBuilder.BuildDrawPile(deckRecipe, rng, removedFromGame));
+            deck.AddRange(cardSpread.use
+                ? cardSpread.Build(deckRecipe.morningFronts, rng, removedFromGame)
+                : DeckBuilder.BuildDrawPile(deckRecipe, rng, removedFromGame));
 
             // The Key goes into the top half of the pile, so it nearly always turns up before Sundown
             int keyAt = deck.FindIndex(c => c.IsKey);
