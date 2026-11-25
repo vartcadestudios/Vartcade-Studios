@@ -79,6 +79,23 @@ namespace TDTS.UI
         {
             if (card == null) return;
 
+            // The design team's illustration when there is one; the coloured card below otherwise
+            Sprite art = CardArt.Side(card, showingBack);
+            sideLabel.gameObject.SetActive(art == null);
+            nameLabel.gameObject.SetActive(art == null);
+            typeLabel.gameObject.SetActive(art == null);
+            if (art != null)
+            {
+                background.sprite = art;
+                background.type = Image.Type.Simple;
+                background.preserveAspect = true;
+                background.color = !showingBack && card.HasMorningFront && card.frontUsed ? UsedTint : Color.white;
+                border.effectColor = new Color(0f, 0f, 0f, 0.55f);
+                return;
+            }
+            background.sprite = null;
+            background.preserveAspect = false;
+
             Color color = ColorFor(card, showingBack);
             background.color = color;
             border.effectColor = showingBack ? new Color(0f, 0f, 0f, 0.6f) : new Color(1f, 1f, 1f, 0.35f);
@@ -98,6 +115,23 @@ namespace TDTS.UI
         {
             var rect = SundownArt.NewRect("CardFront", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             rect.sizeDelta = size;
+
+            Sprite art = CardArt.Front(card);
+            if (art != null)
+            {
+                bool used = card.HasMorningFront && card.frontUsed;
+                Image face = rect.gameObject.AddComponent<Image>();
+                face.sprite = art;
+                face.preserveAspect = true;
+                face.color = used ? UsedTint : Color.white;
+                face.raycastTarget = false;
+                var shade = rect.gameObject.AddComponent<Outline>();
+                shade.effectColor = new Color(0f, 0f, 0f, 0.5f);
+                shade.effectDistance = new Vector2(1.5f, -1.5f);
+                if (used) UsedStamp(rect, size);
+                return rect;
+            }
+
             Color color = ColorFor(card, false);
             SundownArt.Rounded(rect.gameObject.AddComponent<Image>(), color, 8).raycastTarget = false;
             var edge = rect.gameObject.AddComponent<Outline>();
@@ -121,6 +155,25 @@ namespace TDTS.UI
 
             name.color = type.color = TextColorOn(color);
             return rect;
+        }
+
+        /// <summary>Grey veil for a Morning card that has been played (wireframe 06-5).</summary>
+        public static readonly Color UsedTint = new Color(0.55f, 0.55f, 0.55f, 1f);
+
+        /// <summary>A small red USED stamp across the middle of a card drawn with its illustration.</summary>
+        public static void UsedStamp(RectTransform card, Vector2 size)
+        {
+            var stamp = SundownArt.NewRect("Used", card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            stamp.sizeDelta = new Vector2(size.x * 0.86f, size.y * 0.2f);
+            stamp.localEulerAngles = new Vector3(0f, 0f, 14f);
+            SundownArt.Rounded(stamp.gameObject.AddComponent<Image>(), UITheme.Cream, 6).raycastTarget = false;
+            var label = MakeLabel(stamp, "Text", size.y * 0.12f, FontStyles.Bold, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            label.text = "USED";
+            label.color = UITheme.Brick;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 6f;
+            label.fontSizeMax = size.y * 0.14f;
         }
 
         /// <summary>

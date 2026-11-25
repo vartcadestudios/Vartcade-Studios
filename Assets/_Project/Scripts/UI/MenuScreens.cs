@@ -88,9 +88,8 @@ namespace TDTS.UI
             heading.characterSpacing = 18f;
             heading.color = AccentColor;
 
-            var title = SundownFonts.UseTitle(NewText("Title", panel, 56, FontStyles.Normal, TextAlignmentOptions.Left,
+            var title = SundownFonts.Poster(NewText("Title", panel, 56, FontStyles.Normal, TextAlignmentOptions.Left,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(56f, -230f), new Vector2(-56f, -150f)));
-            title.color = TextColor;
 
             var body = NewText("Body", panel, 28, FontStyles.Normal, TextAlignmentOptions.TopLeft,
                 Vector2.zero, Vector2.one, new Vector2(56f, 120f), new Vector2(-56f, -250f));
@@ -141,12 +140,11 @@ namespace TDTS.UI
         public static GameObject Settings(Transform canvas, Action onClose = null)
         {
             RectTransform overlay = Overlay("Settings", canvas);
-            var panel = NewPanel("Panel", overlay, new Vector2(-420f, -352f), new Vector2(420f, 352f));
+            var panel = NewPanel("Panel", overlay, new Vector2(-420f, -404f), new Vector2(420f, 404f));
 
-            var title = SundownFonts.UseTitle(NewText("Title", panel, 56, FontStyles.Normal, TextAlignmentOptions.Left,
+            var title = SundownFonts.Poster(NewText("Title", panel, 56, FontStyles.Normal, TextAlignmentOptions.Left,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(56f, -120f), new Vector2(-56f, -36f)));
-            title.text = "Settings";
-            title.color = TextColor;
+            title.text = "SETTINGS";
 
             float y = -150f;
             RectTransform Row(string label, string hint)
@@ -172,6 +170,9 @@ namespace TDTS.UI
 
             Segmented(Row("Reduce motion", "Still backgrounds, no flicker"), new[] { "On", "Off" },
                 GameSettings.ReduceMotion ? 0 : 1, i => GameSettings.ReduceMotion = i == 0);
+
+            Segmented(Row("Screen filters", "Warm tint, paper, dusk and night"), new[] { "All", "Light", "Off" },
+                (int)GameSettings.ScreenFilters, i => GameSettings.ScreenFilters = (GameSettings.Filters)i);
 
             var done = NewRect("Done", panel, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-296f, 36f), new Vector2(-56f, 100f));
             MakeButton(done, "Done", AccentColor, () => Close(overlay, onClose), 24);
@@ -240,10 +241,9 @@ namespace TDTS.UI
             avatar.anchorMin = avatar.anchorMax = new Vector2(0f, 1f);
             avatar.anchoredPosition = new Vector2(56f + 60f, -56f - 60f);
 
-            var title = SundownFonts.UseTitle(NewText("Name", panel, 60, FontStyles.Normal, TextAlignmentOptions.BottomLeft,
+            var title = SundownFonts.Poster(NewText("Name", panel, 60, FontStyles.Normal, TextAlignmentOptions.BottomLeft,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(200f, -120f), new Vector2(-56f, -40f)));
             title.text = name.ToUpperInvariant();
-            title.color = TextColor;
 
             var since = NewText("Since", panel, 22, FontStyles.Normal, TextAlignmentOptions.TopLeft,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(202f, -170f), new Vector2(-56f, -124f));

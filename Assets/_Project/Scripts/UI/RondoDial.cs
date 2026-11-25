@@ -31,6 +31,9 @@ namespace TDTS.UI
         private TextMeshProUGUI chipText;
 
         private bool spinning;
+        private bool art;                       // the drawn v3 wheel (Resources/Wheel) is in use
+        private Image rimA, rimB;
+        private RectTransform pointerArt;
         private float spinFrom, spinTo, spinStartedAt;
         private RondoResult? landed;
 
@@ -102,6 +105,11 @@ namespace TDTS.UI
         private void Build()
         {
             RectTransform root = (RectTransform)transform;
+            if (ArtKit.Has("Wheel/wheel_face"))
+            {
+                BuildArt(root);
+                return;
+            }
 
             Circle("Rim", root, Size + 16f, RimColor);
             Circle("Edge", root, Size + 6f, new Color(AccentColor.r, AccentColor.g, AccentColor.b, 0.55f));
@@ -172,6 +180,68 @@ namespace TDTS.UI
             chip.SetActive(false);
         }
 
+        /// <summary>
+        /// The drawn v3 wheel: badge wedges, a rim of bulbs that chase while it spins, the Silong sun hub and
+        /// a brass pointer that clicks over the pegs. Wedge i still spans i*45..(i+1)*45 degrees clockwise
+        /// from the top, so the spin maths below is unchanged; dark overlays dim the results it didn't land on.
+        /// </summary>
+        private void BuildArt(RectTransform root)
+        {
+            art = true;
+            float rimSize = Size * 512f / 448f; // the rim art's inner edge meets the wedges
+            rimA = ArtImage("RimA", root, "Wheel/wheel_rim_a", rimSize);
+            rimB = ArtImage("RimB", root, "Wheel/wheel_rim_b", rimSize);
+            rimB.enabled = false;
+
+            wheel = NewRect("Wheel", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            wheel.sizeDelta = new Vector2(Size, Size);
+            // The face sprite has a margin round the wedges; scale it so the wedges fill the wheel
+            ArtImage("Face", wheel, "Wheel/wheel_face", Size * 512f / 452f);
+            wedges = new Image[Count];
+            for (int i = 0; i < Count; i++)
+            {
+                Image dim = Circle($"Dim {(RondoResult)i}", wheel, Size, new Color(0f, 0f, 0f, 0f));
+                dim.type = Image.Type.Filled;
+                dim.fillMethod = Image.FillMethod.Radial360;
+                dim.fillOrigin = (int)Image.Origin360.Top;
+                dim.fillClockwise = true;
+                dim.fillAmount = 1f / Count;
+                dim.rectTransform.localEulerAngles = new Vector3(0f, 0f, -i * WedgeAngle);
+                wedges[i] = dim;
+            }
+            ArtImage("Hub", root, "Wheel/wheel_hub", 58f);
+
+            pointerArt = ArtImage("Pointer", root, "Wheel/wheel_pointer", 34f).rectTransform;
+            pointerArt.sizeDelta = new Vector2(34f, 42f);
+            pointerArt.pivot = new Vector2(0.5f, 0.85f);
+            pointerArt.anchoredPosition = new Vector2(0f, Size / 2f + 20f);
+
+            Image shade = Circle("Cover", root, rimSize, new Color(RimColor.r, RimColor.g, RimColor.b, 0.86f));
+            cover = shade.gameObject;
+            var waiting = NewText("Waiting", shade.transform, 20, FontStyles.Bold, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, new Vector2(20f, 20f), new Vector2(-20f, -20f));
+            waiting.text = $"<size=130%>THE RONDO</size>\n<color=#A9AEBD>wakes on Day {GameManager.RondoStartDay}</color>";
+            waiting.color = TextColor;
+
+            var pill = NewRect("Result", root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-120f, -34f), new Vector2(120f, 2f));
+            Rounded(pill.gameObject.AddComponent<Image>(), RimColor, 18).raycastTarget = false;
+            chipText = NewText("Text", pill, 18, FontStyles.Bold, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-10f, 0f));
+            chip = pill.gameObject;
+            chip.SetActive(false);
+        }
+
+        private static Image ArtImage(string name, Transform parent, string sprite, float size)
+        {
+            var rect = NewRect(name, parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            rect.sizeDelta = new Vector2(size, size);
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.sprite = ArtKit.Get(sprite);
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            return image;
+        }
+
         private static Image Circle(string name, Transform parent, float size, Color color)
         {
             var rect = NewRect(name, parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -227,16 +297,32 @@ namespace TDTS.UI
             cover.SetActive(false);
             chip.SetActive(true);
             chipText.text = "<color=#A9AEBD>The Rondo turns...</color>";
-            foreach (Image w in wedges) w.color = WithAlpha(w.color, 1f);
+            foreach (Image w in wedges) w.color = art ? new Color(0f, 0f, 0f, 0f) : WithAlpha(w.color, 1f);
         }
 
         private void Update()
         {
+            if (art)
+            {
+                // Bulbs chase fast while it spins, slowly otherwise
+                float rate = spinning ? 0.09f : 0.6f;
+                bool flip = Mathf.FloorToInt(Time.time / rate) % 2 == 0;
+                rimA.enabled = !flip;
+                rimB.enabled = flip;
+            }
             if (!spinning) return;
             float t = Mathf.Clamp01((Time.time - spinStartedAt) / SpinSeconds);
             float eased = 1f - Mathf.Pow(1f - t, 3f);
-            wheel.localEulerAngles = new Vector3(0f, 0f, Mathf.Lerp(spinFrom, spinTo, eased));
+            float angle = Mathf.Lerp(spinFrom, spinTo, eased);
+            wheel.localEulerAngles = new Vector3(0f, 0f, angle);
+            if (art)
+            {
+                // The pointer flicks back each time a peg passes under it (16 pegs), then springs home
+                float peg = Mathf.Repeat(angle, 22.5f) / 22.5f;
+                pointerArt.localEulerAngles = new Vector3(0f, 0f, -16f * (1f - peg) * (1f - t));
+            }
             if (t < 1f) return;
+            if (art) pointerArt.localEulerAngles = Vector3.zero;
 
             spinning = false;
             Land(landed.Value);
@@ -249,7 +335,8 @@ namespace TDTS.UI
             landed = result;
             wheel.localEulerAngles = new Vector3(0f, 0f, ((int)result + 0.5f) * WedgeAngle);
             for (int i = 0; i < wedges.Length; i++)
-                wedges[i].color = WithAlpha(ResultColor((RondoResult)i), i == (int)result ? 1f : 0.35f);
+                wedges[i].color = art ? new Color(0f, 0f, 0f, i == (int)result ? 0f : 0.5f)
+                    : WithAlpha(ResultColor((RondoResult)i), i == (int)result ? 1f : 0.35f);
             cover.SetActive(false);
             chip.SetActive(true);
             chipText.text = $"<color=#{ColorUtility.ToHtmlStringRGB(ResultColor(result))}>{BoardController.RondoName(result)}</color>";
@@ -259,7 +346,7 @@ namespace TDTS.UI
         {
             landed = null;
             chip.SetActive(false);
-            for (int i = 0; i < wedges.Length; i++) wedges[i].color = ResultColor((RondoResult)i);
+            for (int i = 0; i < wedges.Length; i++) wedges[i].color = art ? new Color(0f, 0f, 0f, 0f) : ResultColor((RondoResult)i);
         }
 
         // ---------- The banner ----------
@@ -286,19 +373,23 @@ namespace TDTS.UI
             Rounded(faceRect.gameObject.AddComponent<Image>(), face, 14).raycastTarget = false;
             banner.localEulerAngles = new Vector3(0f, 0f, 1.5f);
 
+            // The result's sticker badge hangs over the banner's left edge and moves in its own way
+            bool badge = RondoBadge.Create(banner, result, new Vector2(0f, 0.5f), new Vector2(40f, 0f), 270f) != null;
+            float left = badge ? 200f : 30f;
+
             var eyebrow = NewText("Eyebrow", banner, 22, FontStyles.Bold, TextAlignmentOptions.Center,
-                new Vector2(0f, 1f), Vector2.one, new Vector2(30f, -66f), new Vector2(-30f, -24f));
+                new Vector2(0f, 1f), Vector2.one, new Vector2(left, -66f), new Vector2(-30f, -24f));
             eyebrow.text = $"DAY {view.CurrentDay}  ·  THE RONDO LANDS ON";
             eyebrow.characterSpacing = 14f;
             eyebrow.color = ink;
 
             var name = SundownFonts.UseTitle(NewText("Name", banner, 76, FontStyles.Normal, TextAlignmentOptions.Center,
-                Vector2.zero, Vector2.one, new Vector2(30f, 60f), new Vector2(-30f, -60f)));
+                Vector2.zero, Vector2.one, new Vector2(left, 60f), new Vector2(-30f, -60f)));
             name.text = BoardController.RondoName(result).ToUpperInvariant();
             name.color = ink;
 
             var effect = NewText("Effect", banner, 26, FontStyles.Normal, TextAlignmentOptions.Center,
-                Vector2.zero, new Vector2(1f, 0f), new Vector2(30f, 22f), new Vector2(-30f, 66f));
+                Vector2.zero, new Vector2(1f, 0f), new Vector2(left, 22f), new Vector2(-30f, 66f));
             effect.text = Effect(result);
             effect.color = ink;
 

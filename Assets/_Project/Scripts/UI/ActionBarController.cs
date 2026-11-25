@@ -193,7 +193,7 @@ namespace TDTS.UI
         {
             Image image = button.targetGraphic as Image ?? button.GetComponent<Image>();
             if (image == null) return;
-            SundownArt.Rounded(image, Color.white, 14);
+            SundownArt.Plate(image, Color.white, 14); // bevelled plate like the card frames
             button.targetGraphic = image;
             button.transition = Selectable.Transition.ColorTint;
             button.colors = SundownArt.Tints(color);

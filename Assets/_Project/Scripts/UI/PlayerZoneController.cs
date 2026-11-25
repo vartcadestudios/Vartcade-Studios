@@ -147,6 +147,28 @@ namespace TDTS.UI
         private void Update()
         {
             if (puppet != null && GameView.Current != null) puppet.EyesClosed = GameView.Current.EyesClosed;
+            TurnCards();
+        }
+
+        /// <summary>
+        /// In the room their cards lie on the table facing them (upside down to you, angled toward
+        /// their seat). On your Day turn, or once you've picked them, the cards turn round to face you
+        /// and grow a little, so you can read them and pick one.
+        /// </summary>
+        private void TurnCards()
+        {
+            if (fan == null || TableRoom.Current == null || GameView.Current == null) return;
+            IGameView view = GameView.Current;
+            PlayerData p = GetPlayer();
+            bool forYou = p != null && !view.EyesClosed
+                && ((view.IsLocalTurn && view.CurrentState == GameState.DayPhase) || view.SelectedTarget == p);
+            float facing = seatsAfterYou == 1 ? 200f : seatsAfterYou == 3 ? 160f : 180f;
+            float target = forYou ? 0f : facing;
+            float k = GameSettings.ReduceMotion ? 1f : 1f - Mathf.Exp(-7f * Time.unscaledDeltaTime);
+            float z = Mathf.LerpAngle(fan.localEulerAngles.z, target, k);
+            fan.localEulerAngles = new Vector3(0f, 0f, z);
+            float scale = Mathf.Lerp(fan.localScale.x, forYou ? 1.08f : 0.94f, k);
+            fan.localScale = new Vector3(scale, scale, 1f);
         }
 
         // Highlights stay a little see-through, like the panel itself

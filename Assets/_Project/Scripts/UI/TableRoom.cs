@@ -23,8 +23,22 @@ namespace TDTS.UI
         public static TableRoom Current { get; private set; }
 
         // Reference layout (1920 x 1080), y measured from the top like the wireframe
-        public const float TableEdgeY = 556f;
-        private static readonly float[] SeatX = { 0f, 470f, 960f, 1440f }; // by seats after you (1 = left, 2 = across, 3 = right)
+        /// <summary>The v3 painted room (Resources/RoomV3) is in the project; otherwise the code-drawn room is used.</summary>
+        public static bool ArtRoom => ArtKit.Has("RoomV3/room_day1");
+
+        /// <summary>Where the table's far edge is: lower in the v3 room (smaller table, bigger cast).</summary>
+        public static float TableEdgeY => ArtRoom ? 650f : 556f;
+        private static readonly float[] SeatXCode = { 0f, 470f, 960f, 1440f }; // by seats after you (1 = left, 2 = across, 3 = right)
+        private static readonly float[] SeatXArt = { 0f, 520f, 960f, 1400f };
+        private static float[] SeatX => ArtRoom ? SeatXArt : SeatXCode;
+        private static float PuppetHeight => ArtRoom ? 400f : 300f;
+
+        // v3 room pieces (all in the 1920 x 1080 frame the art was painted in)
+        private Image baseNow, baseNext, artTable, artTableNight, artLamp, artLampNight;
+        private RectTransform fan, spider;
+        private TMPro.TextMeshProUGUI calendarDays, clockDays;
+        private string baseShown = "";
+        private float baseFade = 1f;
 
         private IGameView view;
         private RectTransform room, seats, lamp, lampLight, lightLayer, spotlight;
@@ -65,6 +79,11 @@ namespace TDTS.UI
         {
             room = NewRect("TableRoom", canvas, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             room.SetAsFirstSibling();
+            if (ArtRoom)
+            {
+                BuildArtRoom();
+                return;
+            }
             Fill(room, "Wall", Wall);
             for (int i = 0; i < 17; i++) // vertical planks
             {
@@ -78,7 +97,7 @@ namespace TDTS.UI
             shadeImage.raycastTarget = false;
 
             BuildWindow();
-            BuildShelf();
+            if (!RoomDetails.TryBuild(room)) BuildShelf(); // the team-style props; the old shape shelf if they're missing
 
             // Opponents sit here, behind the table
             // The lamp's pool of light sits behind the seats, so it lights the wall, not the faces
@@ -98,6 +117,118 @@ namespace TDTS.UI
 
             dimmer = Fill(room, "SpotlightDim", new Color(0f, 0f, 0f, 0f));
             nightTint = Fill(room, "NightTint", new Color32(0x0A, 0x22, 0x2B, 0));
+        }
+
+        /// <summary>
+        /// The v3 room: one painted backdrop per stage (Day 1-3 full shelf, Day 4-7 half, Day 8+ almost empty,
+        /// Night, and one per Rondo result) that cross-fade, with the moving bits as their own sprites:
+        /// the table, the lamp (swings), the fan blades (spin) and the spider (drops on its thread).
+        /// The calendar and the red clock under the window show the real days left.
+        /// </summary>
+        private void BuildArtRoom()
+        {
+            baseNow = ArtKit.Full(room, "Backdrop", ArtKit.Get("RoomV3/room_day1"));
+            baseNext = ArtKit.Full(room, "BackdropNext", null, new Color(1f, 1f, 1f, 0f));
+            baseShown = "day1";
+
+            calendarDays = SundownFonts.UseTitle(NewText("CalendarDays", room, 66, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero));
+            Place(calendarDays.rectTransform, 728f, 300f, 120f, 84f);
+            calendarDays.color = new Color32(0x5A, 0x24, 0x20, 255);
+            clockDays = SundownFonts.UseTitle(NewText("ClockDays", room, 34, TMPro.FontStyles.Normal, TMPro.TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero));
+            Place(clockDays.rectTransform, 1232f, 408f, 60f, 40f);
+            clockDays.color = new Color32(0xFF, 0x4A, 0x3A, 255);
+
+            fan = ArtKit.Box(room, "FanBlades", ArtKit.Get("RoomV3/room_fan"), RoomArtLayout.Fan, new Vector2(1800f, 454f)).rectTransform;
+            spider = ArtKit.Box(room, "Spider", ArtKit.Get("RoomV3/room_spider"), RoomArtLayout.Spider).rectTransform;
+
+            // Opponents sit behind the table; the lamp's pool lights the wall behind them
+            lightLayer = NewRect("LampLight", room, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            seats = NewRect("Seats", room, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            spotlight = Glow(room, "Spotlight", new Vector2(960f, 460f), new Vector2(460f, 560f), new Color(1f, 0.85f, 0.55f, 0f));
+
+            artTable = ArtKit.Box(room, "Table", ArtKit.Get("RoomV3/room_table"), RoomArtLayout.Table);
+            artTableNight = ArtKit.Box(room, "TableNight", ArtKit.Get("RoomV3/room_table_night"), RoomArtLayout.TableNight);
+            artTableNight.color = new Color(1f, 1f, 1f, 0f);
+
+            var hook = new Vector2(960f, 96f);
+            artLamp = ArtKit.Box(room, "Lamp", ArtKit.Get("RoomV3/room_lamp"), RoomArtLayout.Lamp, hook);
+            artLampNight = ArtKit.Box(room, "LampNight", ArtKit.Get("RoomV3/room_lamp_night"), RoomArtLayout.LampNight, hook);
+            artLampNight.color = new Color(1f, 1f, 1f, 0f);
+            lamp = artLamp.rectTransform;
+            lampLight = NewRect("Light", lightLayer, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero);
+            lampLight.pivot = new Vector2(0.5f, 1f);
+            lampLight.sizeDelta = new Vector2(900f, 620f);
+            lampLight.anchoredPosition = new Vector2(0f, -250f);
+            var light = lampLight.gameObject.AddComponent<RawImage>();
+            light.texture = PoolTexture();
+            light.color = UITheme.WithAlpha(LampLight, 0.12f);
+            light.raycastTarget = false;
+
+            ScreenOverlays.Create(room, true); // OV10 warm, OV7 paper, OV3 dusk, OV8 night (under the HUD)
+            dimmer = Fill(room, "SpotlightDim", new Color(0f, 0f, 0f, 0f));
+            nightTint = Fill(room, "NightTint", new Color32(0x0A, 0x22, 0x2B, 0));
+        }
+
+        /// <summary>Which painted backdrop fits now: Night, today's Rondo result, or the shelf stage for the days left.</summary>
+        private static string BackdropFor(IGameView v)
+        {
+            if (v.EyesClosed) return "night";
+            if (v.TodaysRondo.HasValue)
+            {
+                switch (v.TodaysRondo.Value)
+                {
+                    case RondoResult.Purge: return "purge";
+                    case RondoResult.TradingOnly: return "trading_only";
+                    case RondoResult.HungerDisaster: return "hunger";
+                    case RondoResult.Tornado: return "tornado";
+                    case RondoResult.DoomsdayClock: return "doomsday";
+                    case RondoResult.Blackout: return "blackout";
+                    case RondoResult.Outbreak: return "outbreak";
+                    case RondoResult.PeacefulDay: return "peaceful";
+                }
+            }
+            int left = v.SundownDay - v.CurrentDay + 1;
+            return left > 7 ? "day1" : left > 3 ? "day5" : "day9";
+        }
+
+        private void UpdateArtRoom(bool still)
+        {
+            // Cross-fade to a new backdrop
+            string want = BackdropFor(view);
+            if (want != baseShown && baseFade >= 1f)
+            {
+                Sprite next = ArtKit.Get("RoomV3/room_" + want);
+                if (next != null)
+                {
+                    baseNext.sprite = next;
+                    baseFade = 0f;
+                    baseShown = want;
+                }
+            }
+            if (baseFade < 1f)
+            {
+                baseFade = still ? 1f : Mathf.MoveTowards(baseFade, 1f, Time.deltaTime / 1.2f);
+                baseNext.color = new Color(1f, 1f, 1f, baseFade);
+                if (baseFade >= 1f)
+                {
+                    baseNow.sprite = baseNext.sprite;
+                    baseNext.color = new Color(1f, 1f, 1f, 0f);
+                }
+            }
+
+            int left = Mathf.Max(0, view.SundownDay - view.CurrentDay + 1);
+            calendarDays.text = left.ToString();
+            clockDays.text = left.ToString("00");
+
+            artLamp.color = new Color(1f, 1f, 1f, 1f - night);
+            artLampNight.color = new Color(1f, 1f, 1f, night);
+            artLampNight.rectTransform.localEulerAngles = lamp.localEulerAngles;
+            artTable.color = new Color(1f, 1f, 1f, 1f - night);
+            artTableNight.color = new Color(1f, 1f, 1f, night);
+            if (!still) fan.localEulerAngles = new Vector3(0f, 0f, fan.localEulerAngles.z - 420f * Time.deltaTime);
+            spider.anchoredPosition = new Vector2(0f, still ? 0f : -Mathf.Abs(Mathf.Sin(Time.time * 0.35f)) * 22f);
         }
 
         private void BuildWindow()
@@ -162,7 +293,10 @@ namespace TDTS.UI
         public Puppet SeatPuppet(int seatsAfterYou, int seatNumber)
         {
             float x = SeatX[Mathf.Clamp(seatsAfterYou, 1, 3)] / 1920f;
-            Puppet puppet = Puppet.Create(seats, new Vector2(x, 1f - (TableEdgeY + 60f) / 1080f), seatNumber, 300f, big: seatNumber % 2 == 0);
+            // The cast art faces left; whoever sits on the left of the table turns to look in toward the middle
+            float feet = TableEdgeY + (ArtRoom ? 70f : 60f);
+            Puppet puppet = Puppet.Create(seats, new Vector2(x, 1f - feet / 1080f), seatNumber, PuppetHeight, seatNumber % 2 == 0, seatsAfterYou == 1);
+            if (ArtRoom && seatsAfterYou != 2) puppet.Turn(1f); // side seats are turned a little toward the middle
             return puppet;
         }
 
@@ -176,18 +310,20 @@ namespace TDTS.UI
             // The lamp sways gently; at Night it's off
             night = Mathf.MoveTowards(night, view.EyesClosed ? 1f : 0f, Time.deltaTime / 1.2f);
             lamp.localEulerAngles = new Vector3(0f, 0f, still ? 0f : Mathf.Sin(Time.time * 0.8f) * 1.6f);
-            lampLight.GetComponent<RawImage>().color = UITheme.WithAlpha(LampLight, 0.16f * (1f - night));
-            nightTint.color = new Color(nightTint.color.r, nightTint.color.g, nightTint.color.b, 0.5f * night);
+            lampLight.GetComponent<RawImage>().color = UITheme.WithAlpha(LampLight, (ArtRoom ? 0.12f : 0.16f) * (1f - night));
+            // The painted Night backdrop is already dark, so the v3 room needs only a touch of tint
+            nightTint.color = new Color(nightTint.color.r, nightTint.color.g, nightTint.color.b, (ArtRoom ? 0.12f : 0.5f) * night);
+            if (ArtRoom) UpdateArtRoom(still);
 
             int day = view.CurrentDay;
             bool isNight = view.EyesClosed;
-            if (day != skyDay || isNight != skyNight) PaintWindow(day, view.SundownDay, isNight);
+            if (windowSky != null && (day != skyDay || isNight != skyNight)) PaintWindow(day, view.SundownDay, isNight);
 
             // 05-2: someone else's Day turn puts a soft light on their seat
             PlayerData active = view.ActivePlayer;
             int seat = SeatOf(active);
             bool spot = seat > 0 && !view.IsLocalTurn && view.CurrentState == GameState.DayPhase && !isNight;
-            if (spot) spotlight.anchorMin = spotlight.anchorMax = new Vector2(SeatX[seat] / 1920f, 1f - 380f / 1080f);
+            if (spot) spotlight.anchorMin = spotlight.anchorMax = new Vector2(SeatX[seat] / 1920f, 1f - (ArtRoom ? 470f : 380f) / 1080f);
             var spotImage = spotlight.GetComponent<RawImage>();
             spotImage.color = new Color(1f, 0.85f, 0.55f, Mathf.MoveTowards(spotImage.color.a, spot ? 0.28f : 0f, Time.deltaTime * 2f));
             dimmer.color = new Color(0f, 0f, 0f, Mathf.MoveTowards(dimmer.color.a, spot ? 0.25f : 0f, Time.deltaTime * 2f));

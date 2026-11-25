@@ -291,6 +291,29 @@ namespace TDTS.UI
                 bool revealed = i == peekIndex;
 
                 // The owner always sees the front; the back only while peeking.
+                bool used = !revealed && card.HasMorningFront && card.frontUsed;
+                Sprite art = CardArt.Side(card, revealed);
+                GameObject band = typeLabels[i].transform.parent.gameObject;
+                if (art != null)
+                {
+                    // The design team's illustration; only a USED band is drawn over it
+                    cards[i].background.sprite = art;
+                    cards[i].background.type = Image.Type.Simple;
+                    cards[i].background.preserveAspect = true;
+                    cards[i].background.color = used ? CardView.UsedTint : Color.white;
+                    cards[i].label.gameObject.SetActive(false);
+                    band.SetActive(used);
+                    typeLabels[i].text = "USED";
+                    typeLabels[i].color = UITheme.Cream;
+                    peekedMarks[i].SetActive(card.peeked && !revealed);
+                    HighlightIfPicked(i);
+                    continue;
+                }
+                SundownArt.Rounded(cards[i].background, Color.white, 12);
+                cards[i].background.preserveAspect = false;
+                cards[i].label.gameObject.SetActive(true);
+                band.SetActive(true);
+
                 // Colours match the Card Gallery (CardView).
                 Color color = CardView.ColorFor(card, revealed);
                 cards[i].background.color = color;
@@ -305,21 +328,28 @@ namespace TDTS.UI
                 // Spec C6: a peeked card only shows a marker, not its back
                 peekedMarks[i].SetActive(card.peeked && !revealed);
 
-                // The card picked for Trade / Play card, or asked for in a trade offered to you,
-                // lifts a little and gets a gold edge
-                bool picked = i == GameView.Current.SelectedCardIndex || i == AskedForIndex();
-                cards[i].root.transform.localScale = picked ? new Vector3(1.08f, 1.08f, 1f) : Vector3.one;
-                Outline outline = cards[i].root.GetComponent<Outline>();
-                if (outline != null)
-                {
-                    outline.enabled = picked;
-                    outline.effectColor = SelectedBorder;
-                    outline.effectDistance = new Vector2(4f, -4f);
-                }
+                HighlightIfPicked(i);
             }
 
             LayOutCards(count);
             MatchNameSizes();
+        }
+
+        /// <summary>
+        /// The card picked for Trade / Play card, or asked for in a trade offered to you,
+        /// lifts a little and gets a gold edge.
+        /// </summary>
+        private void HighlightIfPicked(int i)
+        {
+            bool picked = i == GameView.Current.SelectedCardIndex || i == AskedForIndex();
+            cards[i].root.transform.localScale = picked ? new Vector3(1.08f, 1.08f, 1f) : Vector3.one;
+            Outline outline = cards[i].root.GetComponent<Outline>();
+            if (outline != null)
+            {
+                outline.enabled = picked;
+                outline.effectColor = SelectedBorder;
+                outline.effectDistance = new Vector2(4f, -4f);
+            }
         }
 
         /// <summary>
@@ -335,7 +365,7 @@ namespace TDTS.UI
 
             for (int i = 0; i < cards.Count; i++)
             {
-                if (!cards[i].root.activeInHierarchy) continue;
+                if (!cards[i].label.gameObject.activeInHierarchy) continue;
                 TextMeshProUGUI name = cards[i].label;
                 name.enableAutoSizing = true;
                 name.fontSizeMin = 10f;
@@ -348,7 +378,7 @@ namespace TDTS.UI
             shared = Mathf.Max(shared, floor);
             for (int i = 0; i < cards.Count; i++)
             {
-                if (!cards[i].root.activeInHierarchy) continue;
+                if (!cards[i].label.gameObject.activeInHierarchy) continue;
                 cards[i].label.enableAutoSizing = false;
                 cards[i].label.fontSize = Mathf.Min(shared, fits[i]);
             }

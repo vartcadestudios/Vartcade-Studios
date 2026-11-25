@@ -241,8 +241,7 @@ namespace TDTS.UI
         {
             var title = NewText("Title", canvas, 58, FontStyles.Bold, TextAlignmentOptions.Center,
                 new Vector2(0f, 1f), Vector2.one, new Vector2(48f, -128f), new Vector2(-48f, -44f));
-            SundownFonts.UseTitle(title).text = $"TEN DAYS <color={UITheme.GoldHex}>TO SUNDOWN</color>";
-            title.color = UITheme.Cream;
+            SundownFonts.Poster(title).text = $"TEN DAYS <color={UITheme.GoldHex}>TO SUNDOWN</color>";
             title.characterSpacing = 10f;
 
             var subtitle = NewText("Subtitle", canvas, 22, FontStyles.Bold, TextAlignmentOptions.Center,

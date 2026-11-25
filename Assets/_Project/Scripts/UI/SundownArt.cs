@@ -78,8 +78,7 @@ namespace TDTS.UI
         public static RectTransform NewPanel(string name, Transform parent, Vector2 offsetMin, Vector2 offsetMax)
         {
             var panel = NewRect(name, parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), offsetMin, offsetMax);
-            Rounded(panel.gameObject.AddComponent<Image>(), PanelColor, 24);
-            panel.gameObject.AddComponent<Outline>().effectColor = PanelEdge;
+            WoodPanel(panel.gameObject.AddComponent<Image>());
             var shadow = panel.gameObject.AddComponent<Shadow>();
             shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
             shadow.effectDistance = new Vector2(0f, -10f);
@@ -90,7 +89,7 @@ namespace TDTS.UI
         public static Button MakeButton(Transform parent, string text, Color color, UnityEngine.Events.UnityAction onClick, float size)
         {
             var rect = NewRect(text, parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            Image background = Rounded(rect.gameObject.AddComponent<Image>(), Color.white, 14);
+            Image background = Plate(rect.gameObject.AddComponent<Image>(), Color.white, 14);
             rect.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = background;
@@ -126,6 +125,44 @@ namespace TDTS.UI
             return image;
         }
 
+        private static Sprite plateSprite, woodSprite;
+        private static bool kitLoaded;
+
+        private static void LoadKit()
+        {
+            if (kitLoaded) return;
+            kitLoaded = true;
+            plateSprite = Resources.Load<Sprite>("UI/plate");
+            woodSprite = Resources.Load<Sprite>("UI/panel_wood");
+        }
+
+        /// <summary>
+        /// A bevelled button plate like the card frames: dark outline, light top edge, darker bottom lip.
+        /// The sprite is light grey, so color tints it (and Button tints still work). Falls back to Rounded.
+        /// </summary>
+        public static Image Plate(Image image, Color color, float fallbackCorner = 14)
+        {
+            LoadKit();
+            if (plateSprite == null) return Rounded(image, color, fallbackCorner);
+            image.sprite = plateSprite;
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 2.4f; // corners about 22 px on screen
+            image.color = color;
+            return image;
+        }
+
+        /// <summary>A dark wooden panel in a steel frame with screwed corners (bunker look). Falls back to Rounded.</summary>
+        public static Image WoodPanel(Image image, float fallbackCorner = 24)
+        {
+            LoadKit();
+            if (woodSprite == null) return Rounded(image, PanelColor, fallbackCorner);
+            image.sprite = woodSprite;
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 1.2f;
+            image.color = Color.white;
+            return image;
+        }
+
         /// <summary>Button colours for a white button graphic: hover lightens, press darkens, disabled fades.</summary>
         public static ColorBlock Tints(Color color)
         {
@@ -147,6 +184,17 @@ namespace TDTS.UI
         {
             var card = NewRect("CardBack", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             card.sizeDelta = size;
+
+            // The face-down card made from the design team's Night card style
+            Sprite art = CardArt.FaceDown();
+            if (art != null)
+            {
+                Image face = Decor(card.gameObject.AddComponent<Image>());
+                face.sprite = art;
+                face.preserveAspect = true;
+                return card;
+            }
+
             Decor(Rounded(card.gameObject.AddComponent<Image>(), CardBackEdge, 8));
 
             float edge = Mathf.Max(2f, size.x * 0.05f);

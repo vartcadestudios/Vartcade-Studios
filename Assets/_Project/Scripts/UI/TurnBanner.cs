@@ -50,7 +50,7 @@ namespace TDTS.UI
             // Let a Rondo spin start, then wait for it and its banner to finish
             yield return new WaitForSeconds(0.1f);
             RondoDial rondo = FindFirstObjectByType<RondoDial>();
-            while ((rondo != null && rondo.IsAnnouncing) || GameObject.Find("RondoBanner") != null || GameObject.Find("MorningRecap") != null)
+            while ((rondo != null && rondo.IsAnnouncing) || GameObject.Find("RondoBanner") != null || GameObject.Find("MorningRecap") != null || GameObject.Find("PhaseCalendar") != null)
                 yield return null;
 
             // A skipped turn, or one that's already over, gets no popup
@@ -103,20 +103,19 @@ namespace TDTS.UI
             var shadow = NewRect("Shadow", card, Vector2.zero, Vector2.one, new Vector2(8f, -10f), new Vector2(8f, -10f));
             Rounded(shadow.gameObject.AddComponent<Image>(), UITheme.Charcoal, 10).raycastTarget = false;
             var face = NewRect("Face", card, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            Rounded(face.gameObject.AddComponent<Image>(), UITheme.Gold, 10).raycastTarget = false;
+            Rounded(face.gameObject.AddComponent<Image>(), UITheme.Brick, 10).raycastTarget = false; // red plate like the card frames
 
             bool night = view.CurrentState == GameState.NightPhase;
-            var title = SundownFonts.UseTitle(NewText("Title", card, 96, FontStyles.Normal, TextAlignmentOptions.Center,
+            var title = SundownFonts.Poster(NewText("Title", card, 96, FontStyles.Normal, TextAlignmentOptions.Center,
                 Vector2.zero, Vector2.one, new Vector2(30f, 54f), new Vector2(-30f, -14f)));
             title.text = "YOUR TURN";
-            title.color = UITheme.Charcoal;
 
             var actions = NewText("Actions", card, 26, FontStyles.Bold, TextAlignmentOptions.Center,
                 Vector2.zero, new Vector2(1f, 0f), new Vector2(30f, 16f), new Vector2(-30f, 60f));
             int n = view.ActionsLeft;
             string count = n == 1 ? "1 action" : $"{n} actions";
             actions.text = night ? $"Night {view.CurrentDay}: {count}, one must be a Peek" : $"Day {view.CurrentDay}: {count}";
-            actions.color = UITheme.Charcoal;
+            actions.color = UITheme.Cream;
         }
     }
 }

@@ -11,9 +11,9 @@ Docs/assets/
 ├── characters/
 │   ├── drafts/      the design team's original drawings
 │   └── trace_tests/ vector trace tests (SVG) and the comparison image
-├── cards/           card illustrations: originals and vector versions (coming next)
+├── cards/           card illustrations: originals and which file is which
 ├── brand/           Silong Shelters logo, sun mascot, posters (coming)
-└── references/      empty TDTS_References template: fill it, zip it, send it to Claude
+└── references/      reference-pack template and STYLE_NOTES.md (what we take from each folder)
 ```
 
 ## Rules
@@ -31,6 +31,6 @@ Unity's project folder is `Assets/`. Windows and macOS treat `assets` and `Asset
 | wireframes | v0.1 done; screens 01 to 09 built in Unity on update-layout (Nov 24); review pending (W19) |
 | palette | done |
 | characters | drafts in; full part sets pending (checklist C15, C16) |
-| cards | plan ready; waiting for the illustrations in the reference pack (A21) |
+| cards | 44 illustrations in (fronts, backs, Day/Night); kept as images, in the game since Nov 26 |
 | brand | brief ready: Silong Shelters, rubber hose sun mascot (A20) |
-| references | template ready; to be filled (checklist R01) |
+| references | filled Nov 26; takeaways in references/STYLE_NOTES.md (images kept out of the repo) |

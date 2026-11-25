@@ -26,6 +26,39 @@ namespace TDTS.UI
             return label;
         }
 
+        // Poster lettering, matched to the design team's card titles: yellow fill, red outline, dark extrude
+        public static readonly Color PosterFill = new Color32(0xF4, 0xD6, 0x5A, 255);
+        private static readonly Color PosterOutline = new Color32(0xB9, 0x1C, 0x14, 255);
+        private static readonly Color PosterExtrude = new Color32(0x3A, 0x0A, 0x08, 255);
+        private static Material posterMaterial;
+
+        /// <summary>
+        /// A big title in the cards' poster style: Anton with a red outline and a dark drop extrude.
+        /// The fill starts yellow; set label.color afterwards to change it. One shared material for every poster title.
+        /// </summary>
+        public static TextMeshProUGUI Poster(TextMeshProUGUI label)
+        {
+            UseTitle(label);
+            label.color = PosterFill;
+            if (Title == null) return label;
+            if (posterMaterial == null)
+            {
+                posterMaterial = new Material(Title.material) { name = "Anton Poster" };
+                posterMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
+                posterMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.2f);
+                posterMaterial.SetColor(ShaderUtilities.ID_OutlineColor, PosterOutline);
+                posterMaterial.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+                posterMaterial.SetColor(ShaderUtilities.ID_UnderlayColor, PosterExtrude);
+                posterMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.5f);
+                posterMaterial.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.75f);
+                posterMaterial.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.5f);
+                posterMaterial.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+                ShaderUtilities.UpdateShaderRatios(posterMaterial);
+            }
+            label.fontSharedMaterial = posterMaterial;
+            return label;
+        }
+
         /// <summary>Puts a heading on the title font.</summary>
         public static TextMeshProUGUI UseTitle(TextMeshProUGUI label)
         {

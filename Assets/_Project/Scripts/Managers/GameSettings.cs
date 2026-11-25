@@ -30,6 +30,15 @@ namespace TDTS.Managers
             set => PlayerPrefs.SetInt("settings.reduceMotion", value ? 1 : 0);
         }
 
+        public enum Filters { All, Light, Off }
+
+        /// <summary>The v3 screen filters (warm balance, paper, dusk, night). Light keeps only warm + paper.</summary>
+        public static Filters ScreenFilters
+        {
+            get => (Filters)PlayerPrefs.GetInt("settings.screenFilters", (int)Filters.All);
+            set => PlayerPrefs.SetInt("settings.screenFilters", (int)value);
+        }
+
         public static bool Fullscreen
         {
             get => PlayerPrefs.GetInt(FullscreenKey, 1) == 1;

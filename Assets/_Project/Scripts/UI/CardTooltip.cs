@@ -24,6 +24,7 @@ namespace TDTS.UI
 
         private static RectTransform tip;
         private static TextMeshProUGUI tipText;
+        private static Image zoom; // the card's illustration, shown big beside the text (UNO-style hover)
         private static CardTooltip owner;
 
         /// <summary>Shows a tooltip for whatever card getCard returns when the pointer rests on this object.</summary>
@@ -73,6 +74,13 @@ namespace TDTS.UI
             tipText.text = Describe(card, backKnown != null && backKnown());
             tip.gameObject.SetActive(true);
             tip.SetAsLastSibling();
+            Sprite art = CardArt.Front(card);
+            if (zoom != null)
+            {
+                zoom.sprite = art;
+                zoom.gameObject.SetActive(art != null);
+                if (art != null) zoom.rectTransform.SetAsLastSibling();
+            }
             owner = this;
             LayoutRebuilder.ForceRebuildLayoutImmediate(tip);
             Place();
@@ -83,6 +91,7 @@ namespace TDTS.UI
             if (owner != this) return;
             owner = null;
             if (tip != null) tip.gameObject.SetActive(false);
+            if (zoom != null) zoom.gameObject.SetActive(false);
         }
 
         // Above the card, kept on screen
@@ -99,6 +108,16 @@ namespace TDTS.UI
             float x = Mathf.Clamp(local.x, area.xMin + size.x / 2f + 12f, area.xMax - size.x / 2f - 12f);
             float y = Mathf.Min(local.y + 16f, area.yMax - size.y - 12f);
             tip.anchoredPosition = new Vector2(x, y);
+
+            // The big card sits beside the text: left of it, or right if there's no room on the left
+            if (zoom == null || !zoom.gameObject.activeSelf) return;
+            Vector2 zoomSize = zoom.rectTransform.sizeDelta;
+            float gap = 12f;
+            float left = x - size.x / 2f - gap - zoomSize.x / 2f;
+            float right = x + size.x / 2f + gap + zoomSize.x / 2f;
+            float zx = left - zoomSize.x / 2f >= area.xMin + 12f ? left : Mathf.Min(right, area.xMax - zoomSize.x / 2f - 12f);
+            float zy = Mathf.Clamp(y, area.yMin + 12f, area.yMax - zoomSize.y - 12f);
+            zoom.rectTransform.anchoredPosition = new Vector2(zx, zy);
         }
 
         private static void EnsureTip(Transform canvas)
@@ -123,6 +142,17 @@ namespace TDTS.UI
             tipText = NewText("Text", tip, 22, FontStyles.Normal, TextAlignmentOptions.TopLeft, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             tipText.color = UITheme.Charcoal;
             tip.gameObject.SetActive(false);
+
+            if (zoom != null) Destroy(zoom.gameObject);
+            var zoomRect = NewRect("CardZoom", canvas, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            zoomRect.pivot = new Vector2(0.5f, 0f);
+            zoomRect.sizeDelta = new Vector2(240f, 240f / CardArt.Aspect);
+            zoom = zoomRect.gameObject.AddComponent<Image>();
+            zoom.raycastTarget = false;
+            var zoomShadow = zoomRect.gameObject.AddComponent<Shadow>();
+            zoomShadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            zoomShadow.effectDistance = new Vector2(0f, -8f);
+            zoomRect.gameObject.SetActive(false);
         }
 
         /// <summary>Kind or type, name, a one-line effect, then the back if you know it.</summary>

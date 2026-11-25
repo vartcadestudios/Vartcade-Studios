@@ -38,6 +38,7 @@ namespace TDTS.UI
         private readonly List<Image> pipImages = new List<Image>();
         private readonly List<Image> seatImages = new List<Image>();
         private string shown = "";
+        private bool dial; // the v3 day/night dial replaces the small sun and moon
 
         private void Start()
         {
@@ -47,7 +48,9 @@ namespace TDTS.UI
             if (oldBackground != null) oldBackground.enabled = false;
 
             Build();
+            AddDial();
             gameObject.AddComponent<TurnBanner>(); // "YOUR TURN" popup
+            gameObject.AddComponent<PhaseCalendar>(); // Day / Night card that tears away like a calendar page
             gameObject.AddComponent<TableHud>();   // wireframe v0.1: kinds tracker, portrait, waiting banner, blackout, morning recap
         }
 
@@ -96,6 +99,23 @@ namespace TDTS.UI
             seats = NewRect("Seats", right, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, -20f), new Vector2(120f, 20f));
         }
 
+        /// <summary>
+        /// The v3 day/night porthole sits at the left end of the bar (overhanging it a little); the day number,
+        /// pips and countdown move right to make room, and the small sun / moon icons are hidden.
+        /// </summary>
+        private void AddDial()
+        {
+            var bar = (RectTransform)transform.Find("CountdownBar");
+            if (bar == null || DayNightDial.Create(bar, new Vector2(0f, 0.5f), new Vector2(92f, -18f)) == null) return;
+            dial = true;
+            var shift = new Vector2(176f, 0f);
+            foreach (RectTransform r in new[] { dayNumber.rectTransform, pips, countdown.rectTransform })
+            {
+                r.offsetMin += shift;
+                r.offsetMax += shift;
+            }
+        }
+
         private static Image Disc(string name, Transform parent, Vector2 position, float size, Color color)
         {
             var rect = NewRect(name, parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -132,8 +152,8 @@ namespace TDTS.UI
             LayOutPips(day, sundown, isSundown);
 
             bool night = view.EyesClosed;
-            sunIcon.enabled = !night && !isSundown;
-            moonIcon.enabled = moonBite.enabled = night;
+            sunIcon.enabled = !dial && !night && !isSundown;
+            moonIcon.enabled = moonBite.enabled = !dial && night;
             phaseName.text = isSundown ? "" : view.CurrentState == GameState.NightPhase ? "NIGHT"
                 : view.CurrentDayRule == DayRule.Blackout ? "BLACKOUT" : "DAY";
             // Wireframe 03-5: orange DAY, teal NIGHT
